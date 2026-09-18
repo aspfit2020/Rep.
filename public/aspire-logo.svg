@@ -1,0 +1,120 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 120" width="100%" height="100%" fill="none">
+  <defs>
+    <linearGradient id="aspireRedGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#EF4444" />
+      <stop offset="100%" stop-color="#DC2626" />
+    </linearGradient>
+    <linearGradient id="flameGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#F87171" />
+      <stop offset="100%" stop-color="#EF4444" />
+    </linearGradient>
+  </defs>
+
+  <!-- Left: Silhouette Badge -->
+  <g transform="translate(10, 8)">
+    <!-- Badge Background with subtle bevel -->
+    <rect x="0" y="0" width="104" height="104" rx="20" fill="#0E131F" stroke="#2B3548" stroke-width="2"/>
+    <rect x="2" y="2" width="100" height="100" rx="18" fill="url(#aspireRedGrad)" opacity="0.12"/>
+    
+    <!-- Silhouette of Female & Male Bodybuilders Flexing -->
+    <g transform="translate(5, 7) scale(0.9)" fill="#FFFFFF">
+      <!-- Muscular bodybuilder & athletic female dual silhouette -->
+      <!-- Left side: Female athletic flexing arm & torso -->
+      <path d="M 28 48 C 26 44, 23 41, 19 40 C 14 39, 9 43, 6 48 C 3 53, 5 60, 9 63 C 12 65, 17 64, 21 61 C 24 59, 26 56, 27 52 Z" opacity="0.95"/>
+      <path d="M 20 40 C 18 36, 17 31, 19 26 C 21 21, 26 18, 31 18 C 33 22, 34 26, 33 30 C 31 35, 27 38, 20 40 Z"/>
+      <!-- Ponytail -->
+      <path d="M 18 25 C 13 23, 8 26, 4 30 C 7 32, 12 31, 16 28 Z"/>
+      <!-- Torso & Waist -->
+      <path d="M 28 50 C 31 55, 34 62, 36 70 C 37 76, 36 82, 33 88 C 36 88, 40 86, 43 82 C 45 76, 45 68, 43 60 C 40 54, 35 49, 28 50 Z"/>
+      
+      <!-- Right side: Muscular Male Bodybuilder Front/Back Double Bicep Pose -->
+      <!-- Head and neck/traps -->
+      <path d="M 52 20 C 52 14, 57 10, 63 10 C 69 10, 74 14, 74 20 C 74 24, 72 27, 69 29 C 74 31, 80 34, 84 39 C 81 40, 76 38, 71 35 C 69 36, 67 36, 65 36 C 63 36, 61 36, 59 35 C 54 38, 49 40, 46 39 C 50 34, 56 31, 61 29 C 58 27, 56 24, 56 20 Z"/>
+      
+      <!-- Left Arm (flexed bicep, shoulder & forearm) -->
+      <path d="M 46 39 C 40 37, 34 39, 28 44 C 23 48, 18 55, 12 56 C 8 57, 4 54, 3 49 C 2 44, 5 38, 10 34 C 16 30, 24 29, 31 32 C 37 34, 42 36, 46 39 Z"/>
+      <!-- Left Forearm & Fist flexing up -->
+      <path d="M 8 46 C 6 42, 6 36, 9 32 C 12 28, 17 27, 21 28 C 18 33, 15 39, 13 45 Z"/>
+      <path d="M 9 32 C 8 28, 9 24, 13 22 C 16 21, 20 23, 21 26 C 20 29, 18 31, 15 32 Z"/>
+
+      <!-- Right Arm (huge flexed bicep, peak & forearm) -->
+      <!-- Shoulder / Deltoid -->
+      <path d="M 74 36 C 80 34, 86 36, 91 40 C 96 44, 99 50, 99 56 C 96 58, 91 58, 87 54 C 83 50, 80 44, 75 40 Z"/>
+      <!-- Flexed Bicep peak -->
+      <path d="M 86 40 C 89 35, 93 31, 98 32 C 102 33, 104 38, 103 43 C 100 48, 95 51, 90 49 C 88 46, 87 43, 86 40 Z"/>
+      <!-- Right Forearm & Fist pointing inwards/up -->
+      <path d="M 98 32 C 99 26, 96 21, 91 18 C 86 16, 81 19, 80 24 C 83 26, 87 28, 90 32 Z"/>
+      <path d="M 82 24 C 79 23, 77 24, 76 27 C 76 30, 79 32, 82 31 Z"/>
+
+      <!-- Muscular Chest, Abs, Lats & Torso -->
+      <path d="M 48 45 C 53 43, 59 42, 65 42 C 71 42, 77 43, 82 45 C 85 52, 86 60, 84 68 C 81 74, 77 79, 73 85 C 70 89, 67 92, 63 93 C 59 92, 56 89, 53 85 C 49 79, 45 74, 42 68 C 40 60, 41 52, 48 45 Z"/>
+      
+      <!-- Muscle Definition Cuts (Pecs, Abs & Lats) -->
+      <path d="M 63 44 L 63 76" stroke="#0E131F" stroke-width="2.5" stroke-linecap="round"/>
+      <path d="M 52 56 C 56 59, 60 59, 63 58 C 66 59, 70 59, 74 56" stroke="#0E131F" stroke-width="2" fill="none" stroke-linecap="round"/>
+      <path d="M 54 67 C 58 70, 61 70, 63 69 C 65 70, 68 70, 72 67" stroke="#0E131F" stroke-width="2" fill="none" stroke-linecap="round"/>
+      <path d="M 56 78 C 59 80, 62 80, 63 79 C 64 80, 67 80, 70 78" stroke="#0E131F" stroke-width="2" fill="none" stroke-linecap="round"/>
+    </g>
+    <!-- Little Red Accent Bar on bottom of badge -->
+    <rect x="26" y="96" width="52" height="3" rx="1.5" fill="#EF4444"/>
+  </g>
+
+  <!-- Center/Right: Brand Wordmark -->
+  <g transform="translate(126, 12)">
+    
+    <!-- Top Row: ASPIRE -->
+    <text x="0" y="38" font-family="'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-weight="900" font-size="40" letter-spacing="4" fill="#FFFFFF">
+      ASPIRE
+    </text>
+
+    <!-- Red Dot or Streak Accent behind ASPIRE -->
+    <circle cx="216" cy="18" r="4" fill="#EF4444" />
+
+    <!-- Middle Row: FITNESS in wide techno/geometric font -->
+    <g transform="translate(0, 45)">
+      <!-- Geometric Block Typography for FITNESS -->
+      <text x="0" y="32" font-family="'Impact', 'Arial Black', 'Plus Jakarta Sans', sans-serif" font-weight="900" font-size="34" letter-spacing="9" fill="url(#flameGrad)">
+        FITNESS
+      </text>
+    </g>
+
+    <!-- Bottom Row: Subtitle Pill & Rule: GYM & HEALTH CLUB -->
+    <g transform="translate(0, 84)">
+      <!-- Left decorative line -->
+      <line x1="0" y1="9" x2="35" y2="9" stroke="#EF4444" stroke-width="2.5" stroke-linecap="round"/>
+      
+      <!-- Text badge -->
+      <rect x="42" y="0" width="186" height="18" rx="4" fill="#18202F" stroke="#374151" stroke-width="1"/>
+      <text x="135" y="13" font-family="'Plus Jakarta Sans', sans-serif" font-weight="800" font-size="10.5" letter-spacing="2.5" fill="#E5E7EB" text-anchor="middle">
+        GYM &amp; HEALTH CLUB
+      </text>
+
+      <!-- Right decorative line -->
+      <line x1="235" y1="9" x2="270" y2="9" stroke="#EF4444" stroke-width="2.5" stroke-linecap="round"/>
+    </g>
+
+    <!-- Far Right Location & Multi-Gym Badge (Matching the poster) -->
+    <g transform="translate(282, 4)">
+      <!-- Multi-gym badge -->
+      <rect x="0" y="2" width="102" height="36" rx="6" fill="#111827" stroke="#374151" stroke-width="1"/>
+      <text x="51" y="16" font-family="'Plus Jakarta Sans', sans-serif" font-weight="900" font-size="7.5" letter-spacing="0.5" fill="#EF4444" text-anchor="middle">
+        MULTI-GYM
+      </text>
+      <text x="51" y="28" font-family="'Plus Jakarta Sans', sans-serif" font-weight="800" font-size="7" letter-spacing="0.5" fill="#9CA3AF" text-anchor="middle">
+        FOR GENTS &amp; LADIES
+      </text>
+
+      <!-- Location banner -->
+      <rect x="0" y="44" width="102" height="42" rx="6" fill="#991B1B" stroke="#B91C1C" stroke-width="1"/>
+      <text x="51" y="56" font-family="'Plus Jakarta Sans', sans-serif" font-weight="900" font-size="6.5" fill="#FFFFFF" text-anchor="middle">
+        MADASSERIL BLDG
+      </text>
+      <text x="51" y="67" font-family="'Plus Jakarta Sans', sans-serif" font-weight="800" font-size="6.5" fill="#FEE2E2" text-anchor="middle">
+        EAST MARADY
+      </text>
+      <text x="51" y="78" font-family="'Plus Jakarta Sans', sans-serif" font-weight="900" font-size="7" fill="#FEF08A" text-anchor="middle">
+        MUVATTUPUZHA
+      </text>
+    </g>
+  </g>
+</svg>

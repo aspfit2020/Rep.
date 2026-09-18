@@ -1,0 +1,6 @@
+{
+  "name": "Aspire Gym Administration",
+  "description": "Mobile-first gym administration and management portal with member workout tracking, class schedules, and executive staff controls.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

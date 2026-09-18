@@ -1,0 +1,2152 @@
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Aspire Gym Administration</title>
+    <meta name="description" content="Complete standalone mobile-first gym administration and member portal with attendance tracking, class bookings, equipment maintenance, and facility governance." />
+    <!-- Tailwind CSS CDN with custom config -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            colors: {
+              gray: {
+                850: '#18202F',
+                950: '#080C14',
+              }
+            }
+          }
+        }
+      }
+    </script>
+    <!-- Lucide Icons CDN -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Supabase JS Client SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+      window.__SUPABASE_ENV__ = {
+        url: "%VITE_SUPABASE_URL%",
+        anonKey: "%VITE_SUPABASE_ANON_KEY%"
+      };
+    </script>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');
+      body {
+        font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+      }
+      .view-container { display: none; }
+      .view-container.active { display: block; }
+      /* Custom scrollbar */
+      ::-webkit-scrollbar { width: 6px; height: 6px; }
+      ::-webkit-scrollbar-track { background: #080C14; }
+      ::-webkit-scrollbar-thumb { background: #262E3D; border-radius: 9999px; }
+      ::-webkit-scrollbar-thumb:hover { background: #DC2626; }
+    </style>
+  </head>
+  <body class="bg-gray-950 text-gray-100 min-h-screen flex flex-col selection:bg-red-600 selection:text-white">
+
+    <!-- Toast Notification -->
+    <div id="toast-container" class="fixed top-20 right-4 sm:right-6 z-50 transform transition-all duration-300 opacity-0 pointer-events-none translate-y-[-10px] flex items-center gap-2.5 px-4 py-3 rounded-2xl shadow-2xl border text-sm font-bold">
+      <i id="toast-icon" data-lucide="check-circle-2" class="w-5 h-5"></i>
+      <span id="toast-message">Notification</span>
+    </div>
+
+    <!-- Top Navigation Header -->
+    <header class="sticky top-0 z-40 bg-black/95 backdrop-blur-md border-b border-gray-800 px-4 sm:px-8 py-3.5 flex items-center justify-between shadow-lg">
+      <div class="flex items-center space-x-3 cursor-pointer group" onclick="switchView('home')">
+        <!-- Aspire Fitness Emblem -->
+        <div class="w-10 h-10 rounded-xl bg-red-600 p-1 flex items-center justify-center text-white shrink-0">
+          <img src="/aspire-icon.svg" alt="Aspire Fitness Logo" class="w-full h-full object-contain" />
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="font-black text-xl tracking-tight text-white group-hover:text-red-500 transition-colors">ASPIRE</span>
+            <span class="text-[10px] uppercase font-black tracking-widest px-1.5 py-0.5 rounded bg-red-600 text-white">FITNESS</span>
+          </div>
+          <div class="flex items-center gap-1.5 text-[10px] text-gray-400 font-bold tracking-wider">
+            <span class="text-red-500 uppercase">GYM &amp; HEALTH CLUB</span>
+            <span class="text-gray-600">•</span>
+            <span class="text-gray-400 font-medium hidden sm:inline">East Marady, Muvattupuzha</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Center Status: Operating Hours (No contact numbers) -->
+      <div class="hidden lg:flex items-center gap-3 text-xs font-semibold">
+        <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-900 border border-gray-800 text-gray-300">
+          <i data-lucide="clock" class="w-3.5 h-3.5 text-red-500"></i>
+          <span>Timings: <strong class="text-white">5:30-9:30 AM | 4:30-9:30 PM</strong></span>
+        </div>
+      </div>
+
+      <!-- Right Header Actions -->
+      <div class="flex items-center space-x-2 sm:space-x-3">
+        <!-- User Section (Only shows active user when logged in) -->
+        <div id="header-user-section" class="flex items-center">
+          <!-- Populated by JS -->
+        </div>
+
+        <!-- Quick Admin Portal Button -->
+        <button onclick="handleDrawerAdminClick()" class="px-3 py-2 rounded-xl bg-gray-900 hover:bg-gray-800 border border-gray-800 text-gray-300 hover:text-white transition flex items-center gap-1.5 text-xs font-bold" title="Open Admin Portal">
+          <i data-lucide="shield" class="w-4 h-4 text-red-500"></i>
+          <span class="hidden sm:inline">Admin Portal</span>
+        </button>
+
+        <!-- Hamburger Drawer Button -->
+        <button id="drawer-toggle-btn" onclick="toggleDrawer(true)" class="p-2.5 rounded-xl bg-gray-900 hover:bg-gray-850 border border-gray-800 text-gray-300 hover:text-white transition flex items-center gap-2" title="Open Navigation Menu">
+          <i data-lucide="menu" class="w-5 h-5"></i>
+          <span class="text-xs font-bold">Menu</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Slide-out Hamburger Drawer -->
+    <div id="drawer-backdrop" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs transition-opacity duration-300 opacity-0 pointer-events-none" onclick="toggleDrawer(false)">
+      <div id="drawer-panel" class="absolute right-0 top-0 bottom-0 w-full max-w-sm bg-black border-l border-gray-800 p-6 flex flex-col justify-between transform transition-transform duration-300 translate-x-full" onclick="event.stopPropagation()">
+        
+        <div class="space-y-6">
+          <!-- Drawer Header -->
+          <div class="flex items-center justify-between pb-5 border-b border-gray-800">
+            <div class="flex items-center space-x-3">
+              <div class="w-10 h-10 rounded-xl bg-red-600 p-1 flex items-center justify-center text-white shrink-0">
+                <img src="/aspire-icon.svg" alt="Aspire Fitness" class="w-full h-full object-contain" />
+              </div>
+              <div>
+                <div class="flex items-center gap-1.5">
+                  <span class="font-black text-base text-white">ASPIRE</span>
+                  <span class="text-[9px] uppercase font-black px-1 rounded bg-red-600 text-white">FITNESS</span>
+                </div>
+                <p class="text-[10px] text-gray-400 font-medium">East Marady, Muvattupuzha</p>
+              </div>
+            </div>
+            <button onclick="toggleDrawer(false)" class="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-gray-900 transition">
+              <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+          </div>
+
+          <!-- Sign In Button (Prominently placed in hamburger menu when logged out) -->
+          <div id="drawer-auth-cta" class="pb-2 border-b border-gray-800">
+            <!-- Populated by JS -->
+          </div>
+
+          <!-- Navigation Links -->
+          <div class="space-y-2">
+            <span class="text-[10px] font-black uppercase tracking-wider text-gray-500 px-3 block">Navigation</span>
+            <div class="space-y-1">
+              <button onclick="switchView('home'); toggleDrawer(false);" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold text-gray-300 hover:text-white hover:bg-gray-900 transition">
+                <i data-lucide="home" class="w-4 h-4 text-red-500"></i>
+                <span>Home &amp; Community</span>
+              </button>
+              <button onclick="handleDrawerMemberClick(); toggleDrawer(false);" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold text-gray-300 hover:text-white hover:bg-gray-900 transition">
+                <i data-lucide="user" class="w-4 h-4 text-red-500"></i>
+                <span>Member Portal</span>
+              </button>
+              <button id="drawer-admin-link" onclick="handleDrawerAdminClick(); toggleDrawer(false);" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold text-gray-300 hover:text-white hover:bg-gray-900 transition">
+                <i data-lucide="shield" class="w-4 h-4 text-red-500"></i>
+                <span>Admin Portal &amp; Database</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Facility Schedule Info -->
+          <div class="p-4 bg-gray-950 border border-gray-800 rounded-xl space-y-2">
+            <div class="flex items-center gap-2 text-xs font-bold text-white">
+              <i data-lucide="clock" class="w-4 h-4 text-red-500"></i>
+              <span>Operating Hours</span>
+            </div>
+            <p class="text-xs text-gray-400">
+              Morning: <strong class="text-white">5:30 AM – 9:30 AM</strong><br/>
+              Evening: <strong class="text-white">4:30 PM – 9:30 PM</strong>
+            </p>
+            <p class="text-[11px] text-gray-500">Monday through Saturday</p>
+          </div>
+        </div>
+
+        <!-- Drawer Footer (User Info or Sign In Status) -->
+        <div class="pt-4 border-t border-gray-800">
+          <div id="drawer-user-footer"></div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- MAIN VIEW CONTAINER -->
+    <main class="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 space-y-8">
+      
+      <!-- ============================================== -->
+      <!-- VIEW 1: COMMUNITY LANDING PAGE                  -->
+      <!-- ============================================== -->
+      <div id="view-home" class="view-container active space-y-6">
+        
+        <!-- Welcome Hero Section (Clean, simple, no heavy graphics, no contact numbers, no direct login/pass buttons) -->
+        <div class="rounded-2xl bg-gray-900 border border-gray-800 p-6 sm:p-8 space-y-4">
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-bold uppercase tracking-wider bg-red-600/10 text-red-500 border border-red-600/30">
+              Multi-Gym For Gents &amp; Ladies
+            </span>
+            <span class="text-xs text-gray-400">
+              Madasseril Building, East Marady, Muvattupuzha
+            </span>
+          </div>
+
+          <h1 class="text-3xl sm:text-4xl font-black text-white tracking-tight leading-tight">
+            SHAPE YOUR <span class="text-red-500">PERFECT BODY.</span>
+          </h1>
+
+          <p class="text-sm text-gray-300 leading-relaxed max-w-2xl">
+            Aspire Fitness Gym &amp; Health Club — complete athletic facility with heavy strength platforms, conditioning circuits, sauna &amp; recovery, and certified coaching for ladies and gents.
+          </p>
+
+          <div class="pt-1 flex flex-wrap items-center gap-4 text-xs text-gray-400 border-t border-gray-800">
+            <div class="flex items-center gap-2 pt-2">
+              <i data-lucide="clock" class="w-4 h-4 text-red-500"></i>
+              <span>Hours: <strong class="text-white">5:30-9:30 AM &amp; 4:30-9:30 PM</strong> (Mon - Sat)</span>
+            </div>
+            <div class="flex items-center gap-2 pt-2">
+              <i data-lucide="map-pin" class="w-4 h-4 text-red-500"></i>
+              <span>East Marady, Muvattupuzha</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick Facility Highlights -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div class="p-4 bg-gray-900 border border-gray-800 rounded-xl">
+            <span class="text-[10px] uppercase font-bold text-gray-400 block">Strength Zone</span>
+            <span class="text-base font-black text-white">Full Free Weights</span>
+            <span class="text-[10px] text-gray-400 block mt-0.5">8 Squat &amp; Bench Racks</span>
+          </div>
+          <div class="p-4 bg-gray-900 border border-gray-800 rounded-xl">
+            <span class="text-[10px] uppercase font-bold text-gray-400 block">Recovery Suite</span>
+            <span class="text-base font-black text-white">Sauna &amp; Cold Bath</span>
+            <span class="text-[10px] text-gray-400 block mt-0.5">Infrared &amp; Recovery</span>
+          </div>
+          <div class="p-4 bg-gray-900 border border-gray-800 rounded-xl">
+            <span class="text-[10px] uppercase font-bold text-gray-400 block">Fitness Sessions</span>
+            <span class="text-base font-black text-white" id="stat-classes-today">6 Sessions Today</span>
+            <span class="text-[10px] text-gray-400 block mt-0.5">Daily Coach-Led Classes</span>
+          </div>
+          <div class="p-4 bg-gray-900 border border-gray-800 rounded-xl">
+            <span class="text-[10px] uppercase font-bold text-gray-400 block">Certified Coaching</span>
+            <span class="text-base font-black text-white">Ladies &amp; Gents</span>
+            <span class="text-[10px] text-gray-400 block mt-0.5">Dedicated Trainers</span>
+          </div>
+        </div>
+
+        <!-- Active Member Deals -->
+        <div class="space-y-3">
+          <div>
+            <h2 class="text-lg font-black text-white">Active Member Promotions</h2>
+            <p class="text-xs text-gray-400">Current offers and pro-shop benefits</p>
+          </div>
+          <div id="promos-grid" class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+
+        <!-- Community News -->
+        <div class="space-y-3">
+          <div>
+            <h2 class="text-lg font-black text-white">Gym News &amp; Updates</h2>
+            <p class="text-xs text-gray-400">Facility announcements and member achievements</p>
+          </div>
+          <div id="news-grid" class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+
+        <!-- Club Events -->
+        <div class="space-y-3">
+          <div>
+            <h2 class="text-lg font-black text-white">Upcoming Events</h2>
+            <p class="text-xs text-gray-400">Community fitness workshops and benchmarks</p>
+          </div>
+          <div id="events-grid" class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ============================================== -->
+      <!-- VIEW 2: LOGIN PORTAL                           -->
+      <!-- ============================================== -->
+      <div id="view-login" class="view-container max-w-md mx-auto space-y-6">
+        <div class="text-center space-y-2">
+          <div class="w-14 h-14 mx-auto rounded-2xl bg-red-600 p-2 flex items-center justify-center shadow-lg">
+            <img src="/aspire-icon.svg" alt="Aspire Fitness Logo" class="w-full h-full object-contain" />
+          </div>
+          <h2 class="text-2xl font-black text-white tracking-tight">Sign In to Aspire</h2>
+          <p class="text-xs text-gray-400">Gym &amp; Health Club • East Marady, Muvattupuzha</p>
+        </div>
+
+        <!-- Role Select Tabs (Member & Admin only) -->
+        <div class="bg-gray-900 border border-gray-800 p-1 rounded-xl grid grid-cols-2 gap-1">
+          <button onclick="setLoginRole('member')" id="tab-btn-member" class="py-2.5 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 bg-red-600 text-white shadow">
+            <i data-lucide="user" class="w-3.5 h-3.5"></i>
+            <span>Member</span>
+          </button>
+          <button onclick="setLoginRole('admin')" id="tab-btn-admin" class="py-2.5 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 text-gray-400 hover:text-white">
+            <i data-lucide="shield" class="w-3.5 h-3.5"></i>
+            <span>Admin</span>
+          </button>
+        </div>
+
+        <!-- Login Card -->
+        <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6 space-y-4 shadow-xl">
+          <div id="login-role-banner" class="p-3 rounded-xl bg-gray-950 border border-gray-800 flex items-center justify-between text-xs">
+            <div class="flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-red-500"></span>
+              <span class="font-bold text-white" id="login-role-name">Member Portal Access</span>
+            </div>
+            <span class="text-[11px] font-mono text-gray-500">Secure Access</span>
+          </div>
+
+          <form onsubmit="handleLoginSubmit(event)" class="space-y-4">
+            <div>
+              <label class="block text-xs font-bold uppercase tracking-wider text-gray-300 mb-1">Email / ID</label>
+              <input type="text" id="login-input-email" required class="w-full bg-black border border-gray-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-red-500" placeholder="mid@aspfit.com" />
+            </div>
+            <div>
+              <label class="block text-xs font-bold uppercase tracking-wider text-gray-300 mb-1">Password</label>
+              <input type="password" id="login-input-password" required placeholder="Enter password" class="w-full bg-black border border-gray-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-red-500" />
+            </div>
+
+            <button type="submit" class="w-full py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-sm shadow transition">
+              Sign In
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- ============================================== -->
+      <!-- VIEW 3: MEMBER PORTAL (ATHLETE DASHBOARD)       -->
+      <!-- ============================================== -->
+      <div id="view-member" class="view-container space-y-6">
+        
+        <!-- Member Top Bar -->
+        <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-xl">
+          <div class="flex items-center space-x-4">
+            <div class="w-12 h-12 rounded-xl bg-red-600 text-white font-black text-lg flex items-center justify-center shrink-0 shadow">
+              <span id="member-avatar-initials">AR</span>
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <h1 class="text-xl font-black text-white" id="member-display-name">Alex Rivera</h1>
+                <span class="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-red-950 text-red-400 border border-red-800/60" id="member-display-tier">Pro Member</span>
+              </div>
+              <p class="text-xs text-gray-400 font-mono mt-0.5">
+                ID: <span id="member-display-code" class="text-white font-bold">ASP-8841</span> • Valid thru <span id="member-display-expiry" class="text-gray-300">Dec 2026</span>
+              </p>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <button onclick="simulateTurnstileCheckIn()" class="px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs sm:text-sm shadow transition flex items-center gap-2">
+              <i data-lucide="check-circle" class="w-4 h-4"></i>
+              <span>Simulate Check-In</span>
+            </button>
+            <button onclick="openLogWorkoutModal()" class="px-4 py-2.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-white font-bold text-xs sm:text-sm border border-gray-700 transition flex items-center gap-2">
+              <i data-lucide="plus" class="w-4 h-4 text-red-500"></i>
+              <span>Log Workout</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 3 Key Metric Blocks -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <!-- Digital QR ID Card -->
+          <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6 flex flex-col justify-between items-center text-center space-y-4">
+            <span class="text-xs font-bold uppercase tracking-wider text-gray-400">Digital Access Pass</span>
+            <div class="w-36 h-36 bg-white p-3 rounded-xl flex items-center justify-center">
+              <svg class="w-full h-full text-black" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M2 2h8v8H2V2zm2 2v4h4V4H4zm10-2h8v8h-8V2zm2 2v4h4V4h-4zM2 14h8v8H2v-8zm2 2v4h4v-4H4zm14 0h4v4h-4v-4zm-4-2h4v2h-4v-2zm-2 4h2v4h-2v-4zm6 2h2v2h-2v-2zm-4 2h4v2h-4v-2zM14 8h2v4h-2V8zm-4 4h4v2h-4v-2zm6-4h4v2h-4V8z"/>
+              </svg>
+            </div>
+            <p class="text-[11px] text-gray-400 font-mono">Scan upon entering gym</p>
+          </div>
+
+          <!-- Attendance Streaks & Calendar -->
+          <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6 space-y-4">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold uppercase tracking-wider text-gray-400">Attendance Tracker</span>
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-red-950 text-red-400 border border-red-800/60 flex items-center gap-1">
+                <i data-lucide="flame" class="w-3 h-3 text-red-500"></i>
+                <span id="member-streak-display">18 Day Streak</span>
+              </span>
+            </div>
+            
+            <div class="p-3 bg-black rounded-xl border border-gray-800">
+              <span class="text-[11px] font-bold text-gray-400 block mb-2">March 2026 Activity Days</span>
+              <div class="grid grid-cols-7 gap-1.5 text-center text-[10px]" id="calendar-grid">
+                <!-- dots generated by JS -->
+              </div>
+            </div>
+
+            <div class="flex items-center justify-between text-xs text-gray-400 pt-2 border-t border-gray-800">
+              <span>This Month: <strong class="text-white">18 check-ins</strong></span>
+              <span>Total Visits: <strong class="text-white" id="member-total-visits">94 visits</strong></span>
+            </div>
+          </div>
+
+          <!-- Personal Records & Lifts -->
+          <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6 space-y-4">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold uppercase tracking-wider text-gray-400">Personal Records</span>
+              <span class="text-xs font-bold text-red-500 flex items-center gap-1">
+                <i data-lucide="award" class="w-3.5 h-3.5"></i> Certified PRs
+              </span>
+            </div>
+
+            <div class="space-y-2" id="member-prs-list">
+              <div class="p-2.5 bg-black border border-gray-800 rounded-xl flex items-center justify-between text-xs">
+                <span class="text-gray-400">Barbell Bench Press</span>
+                <span class="font-bold text-white text-sm">245 lbs <span class="text-[10px] text-red-400">+10lb</span></span>
+              </div>
+              <div class="p-2.5 bg-black border border-gray-800 rounded-xl flex items-center justify-between text-xs">
+                <span class="text-gray-400">Back Squat (Raw)</span>
+                <span class="font-bold text-white text-sm">335 lbs</span>
+              </div>
+              <div class="p-2.5 bg-black border border-gray-800 rounded-xl flex items-center justify-between text-xs">
+                <span class="text-gray-400">Conventional Deadlift</span>
+                <span class="font-bold text-white text-sm">425 lbs</span>
+              </div>
+              <div class="p-2.5 bg-black border border-gray-800 rounded-xl flex items-center justify-between text-xs">
+                <span class="text-gray-400">Strict Pull-ups</span>
+                <span class="font-bold text-white text-sm">22 reps</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Class Timetable & Booking -->
+        <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6 space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-800 pb-3">
+            <div>
+              <h3 class="text-base font-black text-white">Fitness Class Timetable</h3>
+              <p class="text-xs text-gray-400">Reserve a slot with certified coaches</p>
+            </div>
+            <div class="flex gap-1.5" id="class-filter-days">
+              <button onclick="filterClasses('All')" class="px-3 py-1 rounded-lg text-xs font-bold bg-red-600 text-white">All</button>
+              <button onclick="filterClasses('Monday')" class="px-3 py-1 rounded-lg text-xs font-bold bg-black text-gray-400 hover:text-white">Mon</button>
+              <button onclick="filterClasses('Tuesday')" class="px-3 py-1 rounded-lg text-xs font-bold bg-black text-gray-400 hover:text-white">Tue</button>
+              <button onclick="filterClasses('Wednesday')" class="px-3 py-1 rounded-lg text-xs font-bold bg-black text-gray-400 hover:text-white">Wed</button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3" id="member-classes-grid">
+            <!-- Rendered by JS -->
+          </div>
+        </div>
+
+        <!-- Recent Check-In History -->
+        <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6 space-y-3">
+          <h3 class="text-base font-black text-white">Recent Attendance Activity</h3>
+          <div class="divide-y divide-gray-800 border border-gray-800 rounded-xl overflow-hidden" id="member-attendance-history">
+            <!-- Rendered by JS -->
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ============================================== -->
+      <!-- VIEW 4: ADMIN PORTAL (EXECUTIVE GOVERNANCE)     -->
+      <!-- ============================================== -->
+      <div id="view-admin" class="view-container space-y-6">
+        
+        <!-- Admin Welcome Banner -->
+        <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-xl">
+          <div>
+            <div class="flex items-center gap-2 mb-1.5">
+              <span class="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-red-950 text-red-400 border border-red-800/60">
+                Administration
+              </span>
+              <span class="text-xs text-gray-400">Administrator: <strong class="text-white" id="admin-banner-name">mid@aspfit.com</strong></span>
+            </div>
+            <h1 class="text-xl sm:text-2xl font-black text-white">Aspire Gym Administration</h1>
+            <p class="text-xs text-gray-400 mt-1">Club governance: member directory, staff coaches, timetable, and financials.</p>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <button onclick="openAddMemberModal()" class="px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs sm:text-sm shadow transition flex items-center gap-2">
+              <i data-lucide="user-plus" class="w-4 h-4"></i> Add Member
+            </button>
+            <button onclick="openBroadcastModal()" class="px-4 py-2.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-white font-bold text-xs sm:text-sm border border-gray-700 transition flex items-center gap-2">
+              <i data-lucide="sparkles" class="w-4 h-4 text-red-500"></i> New Announcement
+            </button>
+          </div>
+        </div>
+
+        <!-- Admin Key KPI Metric Cards -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <div class="bg-gray-900 border border-gray-800 rounded-xl p-4">
+            <span class="text-xs font-bold uppercase tracking-wider text-gray-400 block">Total Members</span>
+            <p class="text-2xl font-black text-white mt-1" id="admin-kpi-members">1,428</p>
+            <p class="text-xs text-red-400 font-bold mt-1">+12% this month</p>
+          </div>
+
+          <div class="bg-gray-900 border border-gray-800 rounded-xl p-4">
+            <span class="text-xs font-bold uppercase tracking-wider text-gray-400 block">Monthly Revenue</span>
+            <p class="text-2xl font-black text-white mt-1">$48,790</p>
+            <p class="text-xs text-red-400 font-bold mt-1">+8.4% target pacing</p>
+          </div>
+
+          <div class="bg-gray-900 border border-gray-800 rounded-xl p-4">
+            <span class="text-xs font-bold uppercase tracking-wider text-gray-400 block">Active Coaches</span>
+            <p class="text-2xl font-black text-white mt-1" id="admin-kpi-coaches">6</p>
+            <p class="text-xs text-gray-400 font-bold mt-1">All shifts covered</p>
+          </div>
+
+          <div class="bg-gray-900 border border-gray-800 rounded-xl p-4">
+            <span class="text-xs font-bold uppercase tracking-wider text-gray-400 block">Avg Occupancy</span>
+            <p class="text-2xl font-black text-white mt-1">84.5%</p>
+            <p class="text-xs text-gray-400 font-bold mt-1">Peak: 5:30 PM</p>
+          </div>
+        </div>
+
+        <!-- Supabase Cloud Database Connection Card -->
+        <div class="bg-gray-900 border border-gray-800 rounded-2xl p-5 shadow-lg space-y-3">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-black border border-gray-800 flex items-center justify-center text-white shrink-0">
+                <i data-lucide="database" class="w-5 h-5 text-red-500"></i>
+              </div>
+              <div>
+                <div class="flex items-center gap-2">
+                  <h3 class="text-sm font-bold text-white">Supabase Cloud Database</h3>
+                  <span id="supabase-status-badge" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-950 text-amber-400 border border-amber-800/60 flex items-center gap-1">
+                    <span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
+                    <span>Checking...</span>
+                  </span>
+                </div>
+                <p id="supabase-status-detail" class="text-xs text-gray-400 mt-0.5">Initializing connection to PostgreSQL tables...</p>
+              </div>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+              <button onclick="syncDataFromSupabase(true)" class="px-3 py-1.5 rounded-lg bg-black hover:bg-gray-800 border border-gray-700 text-xs font-bold text-white transition flex items-center gap-1.5">
+                <i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-gray-400"></i>
+                <span>Sync Tables</span>
+              </button>
+              <button onclick="seedInitialGymData()" id="btn-seed-supabase" class="px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-xs font-bold text-white shadow transition flex items-center gap-1.5">
+                <i data-lucide="upload-cloud" class="w-3.5 h-3.5"></i>
+                <span>Seed Gym Data</span>
+              </button>
+              <button onclick="openModal('modal-supabase-config')" class="px-3 py-1.5 rounded-lg bg-black hover:bg-gray-800 border border-gray-700 text-xs font-bold text-gray-300 hover:text-white transition flex items-center gap-1.5">
+                <i data-lucide="settings" class="w-3.5 h-3.5 text-red-500"></i>
+                <span>Connection Keys</span>
+              </button>
+            </div>
+          </div>
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-3 border-t border-gray-800 text-[11px] text-gray-400">
+            <div><span class="font-mono text-gray-500">Table:</span> <span class="font-bold text-white">members</span></div>
+            <div><span class="font-mono text-gray-500">Table:</span> <span class="font-bold text-white">classes</span></div>
+            <div><span class="font-mono text-gray-500">Table:</span> <span class="font-bold text-white">attendance</span></div>
+            <div><span class="font-mono text-gray-500">Table:</span> <span class="font-bold text-white">news &amp; staff</span></div>
+          </div>
+        </div>
+
+        <!-- Admin Navigation Tabs -->
+        <div class="flex flex-wrap gap-2 border-b border-gray-800 pb-3">
+          <button onclick="setAdminTab('members')" id="admin-tab-btn-members" class="px-4 py-2 rounded-xl text-xs sm:text-sm font-bold bg-red-600 text-white transition flex items-center gap-2">
+            <i data-lucide="users" class="w-4 h-4"></i> Member Directory
+          </button>
+          <button onclick="setAdminTab('staff')" id="admin-tab-btn-staff" class="px-4 py-2 rounded-xl text-xs sm:text-sm font-bold text-gray-400 hover:text-white hover:bg-gray-900 transition flex items-center gap-2">
+            <i data-lucide="user-check" class="w-4 h-4"></i> Staff &amp; Coaches
+          </button>
+          <button onclick="setAdminTab('schedule')" id="admin-tab-btn-schedule" class="px-4 py-2 rounded-xl text-xs sm:text-sm font-bold text-gray-400 hover:text-white hover:bg-gray-900 transition flex items-center gap-2">
+            <i data-lucide="calendar" class="w-4 h-4"></i> Master Timetable
+          </button>
+          <button onclick="setAdminTab('finances')" id="admin-tab-btn-finances" class="px-4 py-2 rounded-xl text-xs sm:text-sm font-bold text-gray-400 hover:text-white hover:bg-gray-900 transition flex items-center gap-2">
+            <i data-lucide="dollar-sign" class="w-4 h-4"></i> Financial Ledger
+          </button>
+        </div>
+
+        <!-- ADMIN TAB 1: MEMBERS DIRECTORY -->
+        <div id="admin-content-members" class="bg-gray-900 border border-gray-800 rounded-2xl p-5 space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <h3 class="text-base font-bold text-white">Registered Members Directory</h3>
+            <div class="flex gap-2">
+              <input type="text" id="admin-member-search" onkeyup="filterAdminMembers(this.value)" placeholder="Search name or ID..." class="px-3 py-1.5 bg-black border border-gray-700 rounded-xl text-xs text-white placeholder-gray-400 focus:outline-none focus:border-red-500" />
+              <button onclick="openAddMemberModal()" class="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl transition">
+                + Add Member
+              </button>
+            </div>
+          </div>
+          <div class="overflow-x-auto border border-gray-800 rounded-xl">
+            <table class="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr class="bg-black text-gray-400 uppercase font-bold border-b border-gray-800">
+                  <th class="py-3 px-4">Member Name</th>
+                  <th class="py-3 px-4">ID Code</th>
+                  <th class="py-3 px-4">Tier</th>
+                  <th class="py-3 px-4">Status</th>
+                  <th class="py-3 px-4">Check-ins</th>
+                  <th class="py-3 px-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-800" id="admin-members-tbody">
+                <!-- Populated by JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ADMIN TAB 2: STAFF -->
+        <div id="admin-content-staff" class="space-y-4 hidden">
+          <div class="flex items-center justify-between">
+            <h3 class="text-base font-bold text-white">Coaches &amp; Training Staff</h3>
+            <button onclick="openAddStaffModal()" class="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl transition">
+              + Add Coach
+            </button>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="admin-staff-grid">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+
+        <!-- ADMIN TAB 3: SCHEDULE -->
+        <div id="admin-content-schedule" class="space-y-4 hidden">
+          <div class="flex items-center justify-between">
+            <h3 class="text-base font-bold text-white">Master Fitness Timetable</h3>
+            <button onclick="openAddClassModal()" class="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl transition">
+              + Create Class
+            </button>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="admin-classes-grid">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+
+        <!-- ADMIN TAB 4: FINANCES -->
+        <div id="admin-content-finances" class="bg-gray-900 border border-gray-800 rounded-2xl p-5 space-y-4 hidden">
+          <div class="flex items-center justify-between border-b border-gray-800 pb-3">
+            <div>
+              <h3 class="text-base font-bold text-white">Transactions &amp; Member Dues</h3>
+              <p class="text-xs text-gray-400">Audited transaction records and receipts</p>
+            </div>
+            <div class="text-right">
+              <span class="text-[10px] uppercase font-bold text-gray-400 block">Today's Ledger</span>
+              <span class="text-lg font-black text-white" id="admin-ledger-total">$864.50</span>
+            </div>
+          </div>
+          <div class="divide-y divide-gray-800 border border-gray-800 rounded-xl overflow-hidden" id="admin-transactions-list">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Footer (Clean, simple, dark mode, black white red, no contact numbers) -->
+      <footer class="mt-12 pt-8 pb-8 border-t border-gray-800">
+        <div class="flex flex-col md:flex-row items-center justify-between gap-6">
+          <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-xl bg-red-600 p-1 flex items-center justify-center text-white shrink-0">
+              <img src="/aspire-icon.svg" alt="Aspire Fitness Logo" class="w-full h-full object-contain" />
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="font-black text-base text-white">ASPIRE</span>
+                <span class="text-[9px] uppercase font-black px-1.5 py-0.5 rounded bg-red-600 text-white">FITNESS</span>
+              </div>
+              <p class="text-xs text-gray-400">Gym &amp; Health Club • East Marady, Muvattupuzha</p>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-4 text-xs text-gray-400">
+            <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-900 border border-gray-800">
+              <i data-lucide="clock" class="w-4 h-4 text-red-500"></i>
+              <span>5:30-9:30 AM &amp; 4:30-9:30 PM (Mon - Sat)</span>
+            </div>
+          </div>
+        </div>
+        <div class="mt-6 pt-4 border-t border-gray-900 text-center text-xs text-gray-500">
+          &copy; 2026 Aspire Fitness Gym &amp; Health Club. Madasseril Building, East Marady, Muvattupuzha.
+        </div>
+      </footer>
+
+    <!-- ============================================== -->
+    <!-- MODALS                                         -->
+    <!-- ============================================== -->
+    
+    <!-- Modal: Log Workout -->
+    <div id="modal-log-workout" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+      <div class="bg-gray-900 border border-gray-700 rounded-3xl w-full max-w-md p-6 space-y-4 shadow-2xl">
+        <div class="flex items-center justify-between border-b border-gray-800 pb-3">
+          <h3 class="text-base font-bold text-white">Log Training Session</h3>
+          <button onclick="closeModal('modal-log-workout')" class="text-gray-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+        </div>
+        <form onsubmit="handleLogWorkout(event)" class="space-y-3">
+          <div>
+            <label class="block text-xs font-bold uppercase text-gray-300 mb-1">Workout Title</label>
+            <input type="text" id="log-workout-title" required placeholder="e.g. Heavy Upper Body Push" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-red-500" />
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-bold uppercase text-gray-300 mb-1">Duration (Mins)</label>
+              <input type="number" id="log-workout-duration" value="65" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-red-500" />
+            </div>
+            <div>
+              <label class="block text-xs font-bold uppercase text-gray-300 mb-1">Calories Burned</label>
+              <input type="number" id="log-workout-calories" value="540" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-red-500" />
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-bold uppercase text-gray-300 mb-1">Exercise Highlights & Notes</label>
+            <textarea id="log-workout-notes" rows="2" placeholder="Bench 225x5, Incline DB 80sx8..." class="w-full bg-gray-950 border border-gray-700 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-red-500"></textarea>
+          </div>
+          <button type="submit" class="w-full py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-sm shadow transition">
+            Save Workout Entry
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal: Register Member -->
+    <div id="modal-add-member" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+      <div class="bg-gray-900 border border-gray-700 rounded-3xl w-full max-w-md p-6 space-y-4 shadow-2xl">
+        <div class="flex items-center justify-between border-b border-gray-800 pb-3">
+          <h3 class="text-base font-bold text-white">Register New Member</h3>
+          <button onclick="closeModal('modal-add-member')" class="text-gray-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+        </div>
+        <form onsubmit="handleAddMember(event)" class="space-y-3">
+          <div>
+            <label class="block text-xs font-bold uppercase text-gray-300 mb-1">Full Legal Name</label>
+            <input type="text" id="new-member-name" required placeholder="e.g. Taylor Mitchell" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-red-500" />
+          </div>
+          <div>
+            <label class="block text-xs font-bold uppercase text-gray-300 mb-1">Email Address</label>
+            <input type="email" id="new-member-email" required placeholder="taylor@example.com" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-red-500" />
+          </div>
+          <div>
+            <label class="block text-xs font-bold uppercase text-gray-300 mb-1">Plan Tier</label>
+            <select id="new-member-tier" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-red-500">
+              <option value="Standard">Standard ($69/mo)</option>
+              <option value="Pro" selected>Pro ($99/mo)</option>
+              <option value="VIP Elite">VIP Elite ($149/mo)</option>
+            </select>
+          </div>
+          <button type="submit" class="w-full py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-sm shadow transition">
+            Create Member Account
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal: Broadcast Announcement -->
+    <div id="modal-broadcast" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+      <div class="bg-gray-900 border border-gray-700 rounded-3xl w-full max-w-md p-6 space-y-4 shadow-2xl">
+        <div class="flex items-center justify-between border-b border-gray-800 pb-3">
+          <h3 class="text-base font-bold text-white">Publish Community Update</h3>
+          <button onclick="closeModal('modal-broadcast')" class="text-gray-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+        </div>
+        <form onsubmit="handleBroadcastNews(event)" class="space-y-3">
+          <div>
+            <label class="block text-xs font-bold uppercase text-gray-300 mb-1">Article Headline</label>
+            <input type="text" id="news-title" required placeholder="e.g. New Olympic Deadlift Platforms Installed" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-red-500" />
+          </div>
+          <div>
+            <label class="block text-xs font-bold uppercase text-gray-300 mb-1">Category</label>
+            <select id="news-category" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-red-500">
+              <option value="Facility">Facility Upgrade</option>
+              <option value="Community">Community Spotlight</option>
+              <option value="Challenge">Fitness Challenge</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-bold uppercase text-gray-300 mb-1">Summary Snippet</label>
+            <textarea id="news-snippet" rows="3" required placeholder="Details visible on community feed..." class="w-full bg-gray-950 border border-gray-700 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-red-500"></textarea>
+          </div>
+          <button type="submit" class="w-full py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-sm shadow transition">
+            Broadcast to Live Feed
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal: Add Coach/Staff -->
+    <div id="modal-add-staff" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+      <div class="bg-gray-900 border border-gray-700 rounded-3xl w-full max-w-md p-6 space-y-4 shadow-2xl">
+        <div class="flex items-center justify-between border-b border-gray-800 pb-3">
+          <h3 class="text-base font-bold text-white">Add Coach / Staff</h3>
+          <button onclick="closeModal('modal-add-staff')" class="text-gray-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+        </div>
+        <form onsubmit="handleAddStaff(event)" class="space-y-3">
+          <div>
+            <label class="block text-xs font-bold uppercase text-gray-300 mb-1">Coach Name</label>
+            <input type="text" id="new-staff-name" required placeholder="e.g. Liam Foster" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-red-500" />
+          </div>
+          <div>
+            <label class="block text-xs font-bold uppercase text-gray-300 mb-1">Role / Title</label>
+            <input type="text" id="new-staff-role" required placeholder="e.g. Strength & Conditioning Coach" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-red-500" />
+          </div>
+          <div>
+            <label class="block text-xs font-bold uppercase text-gray-300 mb-1">Specialty</label>
+            <input type="text" id="new-staff-specialty" required placeholder="e.g. Olympic Weightlifting, Mobility" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-red-500" />
+          </div>
+          <button type="submit" class="w-full py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-sm shadow transition">
+            Add Staff Member
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal: Add Class -->
+    <div id="modal-add-class" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+      <div class="bg-gray-900 border border-gray-700 rounded-3xl w-full max-w-md p-6 space-y-4 shadow-2xl">
+        <div class="flex items-center justify-between border-b border-gray-800 pb-3">
+          <h3 class="text-base font-bold text-white">Create Fitness Class</h3>
+          <button onclick="closeModal('modal-add-class')" class="text-gray-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+        </div>
+        <form onsubmit="handleAddClass(event)" class="space-y-3">
+          <div>
+            <label class="block text-xs font-bold uppercase text-gray-300 mb-1">Class Name</label>
+            <input type="text" id="new-class-name" required placeholder="e.g. Barbell Power Hour" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-red-500" />
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-bold uppercase text-gray-300 mb-1">Category</label>
+              <input type="text" id="new-class-category" required placeholder="e.g. Strength" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-red-500" />
+            </div>
+            <div>
+              <label class="block text-xs font-bold uppercase text-gray-300 mb-1">Coach</label>
+              <input type="text" id="new-class-instructor" required placeholder="e.g. Sarah Chen" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-red-500" />
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-bold uppercase text-gray-300 mb-1">Day</label>
+              <select id="new-class-day" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-red-500">
+                <option value="Monday">Monday</option>
+                <option value="Tuesday">Tuesday</option>
+                <option value="Wednesday">Wednesday</option>
+                <option value="Thursday">Thursday</option>
+                <option value="Friday">Friday</option>
+                <option value="Saturday">Saturday</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-bold uppercase text-gray-300 mb-1">Capacity</label>
+              <input type="number" id="new-class-capacity" required value="20" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-red-500" />
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-bold uppercase text-gray-300 mb-1">Time Slot</label>
+            <input type="text" id="new-class-time" required placeholder="06:00 AM - 07:00 AM" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-red-500" />
+          </div>
+          <button type="submit" class="w-full py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-sm shadow transition">
+            Add to Master Timetable
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal: Supabase Configuration -->
+    <div id="modal-supabase-config" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+      <div class="bg-gray-900 border border-gray-700 rounded-3xl w-full max-w-lg p-6 space-y-4 shadow-2xl">
+        <div class="flex items-center justify-between border-b border-gray-800 pb-3">
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-lg bg-black border border-gray-800 flex items-center justify-center text-red-500">
+              <i data-lucide="database" class="w-4 h-4"></i>
+            </div>
+            <div>
+              <h3 class="text-base font-bold text-white">Supabase Connection Settings</h3>
+              <p class="text-[11px] text-gray-400">Link frontend directly to PostgreSQL tables</p>
+            </div>
+          </div>
+          <button onclick="closeModal('modal-supabase-config')" class="text-gray-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+        </div>
+
+        <div class="p-3 rounded-xl bg-black border border-gray-800 text-xs space-y-2">
+          <p class="text-gray-300">
+            <strong class="text-white">Tip:</strong> You can define these in <code class="text-red-400 bg-gray-900 px-1 py-0.5 rounded">.env.example</code> (<span class="font-mono text-gray-300">VITE_SUPABASE_URL</span> &amp; <span class="font-mono text-gray-300">VITE_SUPABASE_ANON_KEY</span>) or enter them below to connect directly in this browser session.
+          </p>
+        </div>
+
+        <form onsubmit="handleSaveSupabaseConfig(event)" class="space-y-3">
+          <div>
+            <label class="block text-xs font-bold uppercase text-gray-300 mb-1">Project URL</label>
+            <input type="text" id="supabase-config-url" placeholder="https://yourprojectid.supabase.co" class="w-full bg-gray-950 border border-gray-700 rounded-xl px-4 py-2.5 text-xs text-white font-mono focus:outline-none focus:border-red-500" />
+            <span class="text-[10px] text-gray-500 mt-1 block">From Supabase Dashboard: Project Settings &rarr; API &rarr; Project URL</span>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold uppercase text-gray-300 mb-1">Anon / Public API Key</label>
+            <input type="password" id="supabase-config-key" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." class="w-full bg-gray-950 border border-gray-700 rounded-xl px-4 py-2.5 text-xs text-white font-mono focus:outline-none focus:border-red-500" />
+            <span class="text-[10px] text-gray-500 mt-1 block">From Supabase Dashboard: Project Settings &rarr; API &rarr; Project API keys (anon, public)</span>
+          </div>
+
+          <div class="flex items-center justify-between pt-2">
+            <button type="button" onclick="handleClearSupabaseConfig()" class="px-3 py-2 rounded-xl text-xs font-bold text-gray-400 hover:text-red-400 hover:bg-gray-800 transition">
+              Reset / Disconnect
+            </button>
+            <div class="flex items-center gap-2">
+              <button type="button" onclick="closeModal('modal-supabase-config')" class="px-4 py-2 rounded-xl text-xs font-bold text-gray-300 hover:text-white bg-black border border-gray-800 transition">
+                Cancel
+              </button>
+              <button type="submit" class="px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs shadow transition flex items-center gap-1.5">
+                <i data-lucide="check" class="w-4 h-4"></i> Save &amp; Connect
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- ============================================== -->
+    <!-- APPLICATION STATE & JAVASCRIPT                 -->
+    <!-- ============================================== -->
+    <script>
+      // Initial Seed Data
+      const defaultState = {
+        currentView: 'home',
+        currentUser: null, // { role: 'member' | 'admin', name: string, ... }
+        loginRole: 'member',
+        members: [
+          { id: 'mem-1', name: 'Alex Rivera', email: 'alex@gym.com', memberCode: 'ASP-8841', tier: 'Pro', status: 'Active', totalCheckIns: 94, expiryDate: 'Dec 2026' },
+          { id: 'mem-2', name: 'Jordan Mitchell', email: 'jordan.m@gmail.com', memberCode: 'ASP-1049', tier: 'VIP Elite', status: 'Active', totalCheckIns: 142, expiryDate: 'Jan 2027' },
+          { id: 'mem-3', name: 'Elena Rostova', email: 'elena@fitness.com', memberCode: 'ASP-2294', tier: 'Standard', status: 'Pending Renewal', totalCheckIns: 38, expiryDate: 'Mar 2026' },
+          { id: 'mem-4', name: 'David Kim', email: 'dkim@apex.io', memberCode: 'ASP-5012', tier: 'Pro', status: 'Active', totalCheckIns: 71, expiryDate: 'Nov 2026' },
+          { id: 'mem-5', name: 'Maya Patel', email: 'maya.patel@health.org', memberCode: 'ASP-7721', tier: 'VIP Elite', status: 'Active', totalCheckIns: 119, expiryDate: 'Feb 2027' }
+        ],
+        classes: [
+          { id: 'cls-1', name: 'Olympic Barbell Power', instructor: 'Sarah Chen', day: 'Monday', time: '06:00 AM - 07:00 AM', room: 'Alpha Zone', category: 'Strength', capacity: 16, enrolled: 12, userEnrolled: true },
+          { id: 'cls-2', name: 'HIIT Engine Circuit', instructor: 'Marcus Vance', day: 'Monday', time: '12:00 PM - 01:00 PM', room: 'Studio B', category: 'HIIT', capacity: 20, enrolled: 18, userEnrolled: false },
+          { id: 'cls-3', name: 'High-Cadence Spin', instructor: 'Jessica Lee', day: 'Tuesday', time: '05:30 PM - 06:30 PM', room: 'Cycle Vault', category: 'Spin', capacity: 24, enrolled: 22, userEnrolled: false },
+          { id: 'cls-4', name: 'Mobility & Cold Recovery', instructor: 'Liam Foster', day: 'Wednesday', time: '07:00 PM - 08:00 PM', room: 'Zenith Loft', category: 'Recovery', capacity: 15, enrolled: 9, userEnrolled: true }
+        ],
+        news: [
+          { id: 'n-1', title: 'New Eleiko Competition Plates Arrived', category: 'Facility', snippet: 'Eight brand new calibrated powerlifting stations are now live on Platform 4.', date: 'Today', likes: 48 },
+          { id: 'n-2', title: 'Spring Squat & Bench Benchmark Week', category: 'Challenge', snippet: 'Register with Coach Sarah to get your 1RM verified for the club record board.', date: '2 Days Ago', likes: 64 },
+          { id: 'n-3', title: 'Member of the Month: Jordan M.', category: 'Community', snippet: 'Jordan completed 26 workout sessions last month with a 40lb deadlift PR!', date: '4 Days Ago', likes: 92 }
+        ],
+        promos: [
+          { id: 'p-1', title: 'Spring Recovery Pass', code: 'SPRINGPLUNGE', discount: '30% OFF', description: 'Unlimited infrared sauna & ice plunge access for March.', expiresIn: '6 Days Left' },
+          { id: 'p-2', title: 'Pro-Shop Whey & Fuel', code: 'ASPIREFUEL20', discount: '20% OFF', description: 'Applicable at front desk checkout on all isolate proteins.', expiresIn: '12 Days Left' }
+        ],
+        events: [
+          { id: 'ev-1', title: 'Saturday Morning Barbell Throwdown', time: 'Saturday • 09:00 AM', rsvpCount: 28, userRsvpd: true },
+          { id: 'ev-2', title: 'Breathwork & Ice Bath Workshop', time: 'Sunday • 11:00 AM', rsvpCount: 19, userRsvpd: false }
+        ],
+        staff: [
+          { id: 'st-1', name: 'Sarah Chen', role: 'Head Coach & Director', specialty: 'Olympic Weightlifting, CSCS', rating: 4.9 },
+          { id: 'st-2', name: 'Marcus Vance', role: 'Operations Supervisor', specialty: 'Functional Strength & Metcon', rating: 4.8 },
+          { id: 'st-3', name: 'Jessica Lee', role: 'Spin & Conditioning Coach', specialty: 'Endurance & Heart Rate Zones', rating: 4.9 }
+        ],
+        attendanceStream: [
+          { id: 'att-1', name: 'Alex Rivera', time: '08:42 AM', type: 'Turnstile Card' },
+          { id: 'att-2', name: 'Elena Rostova', time: '08:15 AM', type: 'Barcode Scan' },
+          { id: 'att-3', name: 'David Kim', time: '07:50 AM', type: 'NFC Pass' }
+        ],
+        transactions: [
+          { id: 'tx-1', item: 'Monthly Pro Membership Dues', member: 'Alex Rivera', amount: 99.00, date: 'Today' },
+          { id: 'tx-2', item: 'Cold Pressed Recovery Juice', member: 'Elena Rostova', amount: 6.50, date: 'Today' },
+          { id: 'tx-3', item: 'VIP Elite Annual Renewal', member: 'Jordan Mitchell', amount: 149.00, date: 'Yesterday' }
+        ]
+      };
+
+      // Load state from localStorage or use defaults
+      let appState = JSON.parse(localStorage.getItem('aspire_gym_state')) || defaultState;
+
+      // Cleanse any obsolete manager role from saved state
+      if (appState.currentUser && appState.currentUser.role === 'manager') {
+        appState.currentUser = null;
+      }
+      if (appState.loginRole === 'manager') {
+        appState.loginRole = 'member';
+      }
+
+      function saveState() {
+        localStorage.setItem('aspire_gym_state', JSON.stringify(appState));
+        renderApp();
+      }
+
+      // ==============================================
+      // SUPABASE CLOUD DATABASE INTEGRATION LAYER
+      // ==============================================
+      let supabaseClient = null;
+      let isSupabaseConnected = false;
+      let realtimeChannel = null;
+
+      function getSupabaseConfig() {
+        let envUrl = (window.__SUPABASE_ENV__ && window.__SUPABASE_ENV__.url && !window.__SUPABASE_ENV__.url.startsWith('%')) 
+          ? window.__SUPABASE_ENV__.url 
+          : '';
+        let envKey = (window.__SUPABASE_ENV__ && window.__SUPABASE_ENV__.anonKey && !window.__SUPABASE_ENV__.anonKey.startsWith('%')) 
+          ? window.__SUPABASE_ENV__.anonKey 
+          : '';
+
+        const storedUrl = localStorage.getItem('aspire_supabase_url') || '';
+        const storedKey = localStorage.getItem('aspire_supabase_anon_key') || '';
+
+        const effectiveUrl = (envUrl || storedUrl).trim();
+        const effectiveKey = (envKey || storedKey).trim();
+
+        return {
+          url: effectiveUrl,
+          anonKey: effectiveKey,
+          isFromEnv: !!envUrl
+        };
+      }
+
+      function updateSupabaseStatusUI() {
+        const badge = document.getElementById('supabase-status-badge');
+        const detail = document.getElementById('supabase-status-detail');
+        const urlInput = document.getElementById('supabase-config-url');
+        const keyInput = document.getElementById('supabase-config-key');
+        const cfg = getSupabaseConfig();
+
+        if (urlInput && !urlInput.value && cfg.url) urlInput.value = cfg.url;
+        if (keyInput && !keyInput.value && cfg.anonKey) keyInput.value = cfg.anonKey;
+
+        if (!badge) return;
+
+        if (isSupabaseConnected && supabaseClient) {
+          badge.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-950 text-emerald-400 border border-emerald-800/60 flex items-center gap-1';
+          badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span><span>Connected (Cloud Sync)</span>';
+          const cleanUrl = cfg.url.replace(/^https?:\/\//, '').split('/')[0];
+          if (detail) {
+            detail.innerHTML = `Live sync with <strong class="text-white">${cleanUrl}</strong> &bull; Changes stream in real-time`;
+          }
+        } else if (cfg.url && cfg.anonKey) {
+          badge.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-950 text-amber-400 border border-amber-800/60 flex items-center gap-1';
+          badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span><span>Connecting...</span>';
+          if (detail) detail.textContent = 'Connecting to Supabase PostgreSQL database...';
+        } else {
+          badge.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-800 text-gray-400 border border-gray-700 flex items-center gap-1';
+          badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-gray-500"></span><span>Offline / Demo Mode</span>';
+          if (detail) {
+            detail.innerHTML = 'Add your <strong class="text-white">VITE_SUPABASE_URL</strong> &amp; <strong class="text-white">VITE_SUPABASE_ANON_KEY</strong> to connect live database.';
+          }
+        }
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+      }
+
+      async function initSupabase() {
+        const cfg = getSupabaseConfig();
+        if (!cfg.url || !cfg.anonKey) {
+          isSupabaseConnected = false;
+          updateSupabaseStatusUI();
+          return;
+        }
+
+        if (typeof window.supabase === 'undefined') {
+          console.warn('Supabase SDK script not ready yet');
+          return;
+        }
+
+        try {
+          supabaseClient = window.supabase.createClient(cfg.url, cfg.anonKey, {
+            auth: {
+              persistSession: true,
+              autoRefreshToken: true
+            }
+          });
+
+          // Test query
+          const { error } = await supabaseClient.from('classes').select('id').limit(1);
+          if (error && error.code !== 'PGRST116') {
+            console.info('Supabase initial query notice:', error.message);
+          }
+          isSupabaseConnected = true;
+          updateSupabaseStatusUI();
+          await syncDataFromSupabase(false);
+          setupRealtimeSubscriptions();
+        } catch (err) {
+          console.error('Supabase initialization error:', err);
+          isSupabaseConnected = false;
+          updateSupabaseStatusUI();
+        }
+      }
+
+      async function syncDataFromSupabase(isManual = false) {
+        if (!supabaseClient) {
+          if (isManual) showToast('Please enter your Supabase URL and Key first', false);
+          return;
+        }
+
+        try {
+          // 1. Fetch Classes
+          const { data: classesData, error: clsErr } = await supabaseClient
+            .from('classes')
+            .select('*')
+            .order('name', { ascending: true });
+          
+          if (!clsErr && classesData && classesData.length > 0) {
+            appState.classes = classesData.map(c => ({
+              id: c.id,
+              name: c.name,
+              instructor: c.instructor,
+              day: c.day,
+              time: c.time,
+              room: c.room || 'Main Studio',
+              category: c.category,
+              capacity: c.capacity,
+              enrolled: c.enrolled || 0,
+              userEnrolled: false
+            }));
+          }
+
+          // 2. Fetch News
+          const { data: newsData, error: newsErr } = await supabaseClient
+            .from('news')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+          if (!newsErr && newsData && newsData.length > 0) {
+            appState.news = newsData.map(n => ({
+              id: n.id,
+              title: n.title,
+              category: n.category,
+              snippet: n.snippet,
+              date: n.date || 'Recent',
+              likes: n.likes || 0
+            }));
+          }
+
+          // 3. Fetch Staff
+          const { data: staffData, error: staffErr } = await supabaseClient
+            .from('staff')
+            .select('*');
+
+          if (!staffErr && staffData && staffData.length > 0) {
+            appState.staff = staffData.map(s => ({
+              id: s.id,
+              name: s.name,
+              role: s.role,
+              specialty: s.specialty,
+              rating: parseFloat(s.rating) || 5.0
+            }));
+          }
+
+          // 4. Fetch Members
+          const { data: membersData, error: memErr } = await supabaseClient
+            .from('members')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+          if (!memErr && membersData && membersData.length > 0) {
+            appState.members = membersData.map(m => ({
+              id: m.id,
+              name: m.name,
+              email: m.email,
+              memberCode: m.member_code,
+              tier: m.tier || 'Pro',
+              status: m.status || 'Active',
+              totalCheckIns: m.total_check_ins || 0,
+              expiryDate: m.expiry_date || 'Dec 2026'
+            }));
+          }
+
+          // 5. Fetch Attendance
+          const { data: attData, error: attErr } = await supabaseClient
+            .from('attendance')
+            .select('*')
+            .order('checked_in_at', { ascending: false })
+            .limit(10);
+
+          if (!attErr && attData && attData.length > 0) {
+            appState.attendanceStream = attData.map(a => ({
+              id: a.id,
+              name: a.member_name,
+              time: new Date(a.checked_in_at || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              type: a.type || 'Turnstile Scan'
+            }));
+          }
+
+          saveState();
+          isSupabaseConnected = true;
+          updateSupabaseStatusUI();
+          if (isManual) {
+            showToast('All tables successfully synced from Supabase!');
+          }
+        } catch (err) {
+          console.error('Error syncing data from Supabase:', err);
+          if (isManual) {
+            showToast('Sync completed (some tables may still be initializing)');
+          }
+        }
+      }
+
+      function setupRealtimeSubscriptions() {
+        if (!supabaseClient || !isSupabaseConnected) return;
+        try {
+          if (realtimeChannel) {
+            supabaseClient.removeChannel(realtimeChannel);
+          }
+          realtimeChannel = supabaseClient
+            .channel('aspire-realtime')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'classes' }, () => syncDataFromSupabase(false))
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'news' }, () => syncDataFromSupabase(false))
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'attendance' }, (payload) => {
+              if (payload.eventType === 'INSERT' && payload.new) {
+                const a = payload.new;
+                appState.attendanceStream.unshift({
+                  id: a.id,
+                  name: a.member_name,
+                  time: new Date(a.checked_in_at || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                  type: a.type || 'Turnstile Scan'
+                });
+                renderApp();
+              } else {
+                syncDataFromSupabase(false);
+              }
+            })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'members' }, () => syncDataFromSupabase(false))
+            .subscribe();
+        } catch (e) {
+          console.warn('Realtime subscription error:', e);
+        }
+      }
+
+      async function seedInitialGymData() {
+        if (!supabaseClient) {
+          showToast('Connect to Supabase first via Connection Keys', false);
+          openModal('modal-supabase-config');
+          return;
+        }
+
+        showToast('Uploading initial gym tables to Supabase...');
+        try {
+          // 1. Seed classes
+          for (const c of defaultState.classes) {
+            await supabaseClient.from('classes').upsert({
+              name: c.name,
+              instructor: c.instructor,
+              day: c.day,
+              time: c.time,
+              room: c.room,
+              category: c.category,
+              capacity: c.capacity,
+              enrolled: c.enrolled
+            }, { onConflict: 'name' });
+          }
+
+          // 2. Seed staff
+          for (const s of defaultState.staff) {
+            await supabaseClient.from('staff').upsert({
+              name: s.name,
+              role: s.role,
+              specialty: s.specialty,
+              rating: s.rating
+            }, { onConflict: 'name' });
+          }
+
+          // 3. Seed news
+          for (const n of defaultState.news) {
+            await supabaseClient.from('news').insert({
+              title: n.title,
+              category: n.category,
+              snippet: n.snippet,
+              date: n.date,
+              likes: n.likes
+            });
+          }
+
+          // 4. Seed members
+          for (const m of defaultState.members) {
+            await supabaseClient.from('members').upsert({
+              name: m.name,
+              email: m.email,
+              member_code: m.memberCode,
+              tier: m.tier,
+              status: m.status,
+              total_check_ins: m.totalCheckIns,
+              expiry_date: m.expiryDate,
+              role: 'member'
+            }, { onConflict: 'email' });
+          }
+
+          showToast('Initial gym records successfully created in Supabase!');
+          await syncDataFromSupabase(false);
+        } catch (err) {
+          console.error('Error seeding data:', err);
+          showToast('Seeding completed. Verify tables in Supabase SQL editor.');
+        }
+      }
+
+      function handleSaveSupabaseConfig(e) {
+        e.preventDefault();
+        const url = (document.getElementById('supabase-config-url')?.value || '').trim();
+        const key = (document.getElementById('supabase-config-key')?.value || '').trim();
+
+        if (!url || !key) {
+          showToast('Please enter both Supabase URL and Anon Key', false);
+          return;
+        }
+
+        localStorage.setItem('aspire_supabase_url', url);
+        localStorage.setItem('aspire_supabase_anon_key', key);
+        closeModal('modal-supabase-config');
+        showToast('Supabase credentials saved. Initializing connection...');
+        initSupabase();
+      }
+
+      function handleClearSupabaseConfig() {
+        localStorage.removeItem('aspire_supabase_url');
+        localStorage.removeItem('aspire_supabase_anon_key');
+        supabaseClient = null;
+        isSupabaseConnected = false;
+        const urlInput = document.getElementById('supabase-config-url');
+        const keyInput = document.getElementById('supabase-config-key');
+        if (urlInput) urlInput.value = '';
+        if (keyInput) keyInput.value = '';
+        closeModal('modal-supabase-config');
+        showToast('Supabase credentials removed. Switched to demo mode.');
+        updateSupabaseStatusUI();
+      }
+
+      // UI View Switcher
+      function switchView(viewName) {
+        appState.currentView = viewName;
+        document.querySelectorAll('.view-container').forEach(el => el.classList.remove('active'));
+        const target = document.getElementById('view-' + viewName);
+        if (target) target.classList.add('active');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        renderApp();
+      }
+
+      function toggleDrawer(open) {
+        const backdrop = document.getElementById('drawer-backdrop');
+        const panel = document.getElementById('drawer-panel');
+        if (open) {
+          backdrop.classList.remove('opacity-0', 'pointer-events-none');
+          panel.classList.remove('translate-x-full');
+        } else {
+          backdrop.classList.add('opacity-0', 'pointer-events-none');
+          panel.classList.add('translate-x-full');
+        }
+      }
+
+      function handleDrawerMemberClick() {
+        if (appState.currentUser && appState.currentUser.role === 'member') {
+          switchView('member');
+        } else {
+          setLoginRole('member');
+          switchView('login');
+        }
+      }
+
+      function handleDrawerAdminClick() {
+        if (appState.currentUser && appState.currentUser.role === 'admin') {
+          switchView('admin');
+        } else {
+          // If not logged in as admin, open login with admin tab selected
+          setLoginRole('admin');
+          switchView('login');
+        }
+      }
+
+      function showToast(msg, isSuccess = true) {
+        const container = document.getElementById('toast-container');
+        const text = document.getElementById('toast-message');
+        const icon = document.getElementById('toast-icon');
+
+        text.textContent = msg;
+        if (isSuccess) {
+          container.className = 'fixed top-20 right-4 sm:right-6 z-50 transform transition-all duration-300 opacity-100 translate-y-0 flex items-center gap-2.5 px-4 py-3 rounded-2xl shadow-2xl border text-sm font-bold bg-black text-white border-red-600';
+          icon.setAttribute('data-lucide', 'check-circle-2');
+          icon.className = 'w-5 h-5 text-red-500';
+        } else {
+          container.className = 'fixed top-20 right-4 sm:right-6 z-50 transform transition-all duration-300 opacity-100 translate-y-0 flex items-center gap-2.5 px-4 py-3 rounded-2xl shadow-2xl border text-sm font-bold bg-black text-white border-red-600';
+          icon.setAttribute('data-lucide', 'alert-triangle');
+          icon.className = 'w-5 h-5 text-red-500';
+        }
+        lucide.createIcons();
+
+        setTimeout(() => {
+          container.classList.add('opacity-0', 'pointer-events-none');
+        }, 3500);
+      }
+
+      // Login & Auth Helpers (Member & Admin only)
+      function setLoginRole(role) {
+        appState.loginRole = role;
+        ['member', 'admin'].forEach(r => {
+          const btn = document.getElementById(`tab-btn-${r}`);
+          if (btn) {
+            if (r === role) {
+              btn.className = 'py-2.5 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 bg-red-600 text-white shadow';
+            } else {
+              btn.className = 'py-2.5 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 text-gray-400 hover:text-white';
+            }
+          }
+        });
+        const nameEl = document.getElementById('login-role-name');
+        const emailInput = document.getElementById('login-input-email');
+        if (nameEl) {
+          if (role === 'member') {
+            nameEl.textContent = 'Athlete Member Access';
+            if (emailInput) emailInput.placeholder = 'alex@gym.com';
+          }
+          if (role === 'admin') {
+            nameEl.textContent = 'Head Administrator Suite';
+            if (emailInput) emailInput.placeholder = 'mid@aspfit.com';
+          }
+        }
+      }
+
+      async function handleLoginSubmit(e) {
+        e.preventDefault();
+        const email = (document.getElementById('login-input-email')?.value || '').trim();
+        const password = document.getElementById('login-input-password')?.value || '';
+
+        // If connected to Supabase and credentials provided, attempt real Supabase Auth
+        if (supabaseClient && isSupabaseConnected && email && password) {
+          try {
+            const { data: authData, error: authError } = await supabaseClient.auth.signInWithPassword({
+              email,
+              password
+            });
+
+            if (!authError && authData?.user) {
+              const { data: memRecord } = await supabaseClient
+                .from('members')
+                .select('*')
+                .eq('email', email)
+                .maybeSingle();
+
+              const role = (memRecord?.role === 'admin' || email.toLowerCase().includes('admin') || email.toLowerCase() === 'mid@aspfit.com' || email.toLowerCase() === 'aspfit2020@gmail.com') ? 'admin' : 'member';
+              appState.currentUser = {
+                id: authData.user.id,
+                role,
+                name: memRecord?.name || authData.user.user_metadata?.full_name || (role === 'admin' ? 'Administrator (mid)' : email.split('@')[0]),
+                email: authData.user.email,
+                tier: memRecord?.tier || 'Pro',
+                memberCode: memRecord?.member_code || 'ASP-AUTH'
+              };
+              showToast(`Verified Sign-in: Welcome, ${appState.currentUser.name}`);
+              switchView(role);
+              saveState();
+              return;
+            } else if (authError) {
+              console.info('Supabase Auth response:', authError.message);
+            }
+          } catch (err) {
+            console.warn('Supabase Auth error:', err);
+          }
+        }
+
+        // Dedicated Authentication Validation:
+        // Admin ID: mid@aspfit.com with password: Aspfit2020
+        const isRequestedAdmin = (email.toLowerCase() === 'mid@aspfit.com' || email.toLowerCase() === 'aspfit2020@gmail.com' || (appState.loginRole === 'admin' && email.toLowerCase().includes('admin')));
+        
+        if (isRequestedAdmin || appState.loginRole === 'admin') {
+          if (email.toLowerCase() === 'mid@aspfit.com' || email.toLowerCase() === 'aspfit2020@gmail.com') {
+            if (password !== 'Aspfit2020') {
+              showToast('Incorrect password. Please enter Aspfit2020', false);
+              return;
+            }
+            appState.currentUser = { role: 'admin', name: 'Admin (mid)', email: 'mid@aspfit.com' };
+            switchView('admin');
+            showToast('Signed in as Administrator (mid@aspfit.com)');
+            saveState();
+            return;
+          } else if (password === 'Aspfit2020') {
+            appState.currentUser = { role: 'admin', name: 'Administrator', email: email || 'mid@aspfit.com' };
+            switchView('admin');
+            showToast(`Signed in to Admin Suite (${appState.currentUser.email})`);
+            saveState();
+            return;
+          } else {
+            showToast('Invalid Admin credentials. Use mid@aspfit.com with password Aspfit2020', false);
+            return;
+          }
+        }
+
+        // Member Login
+        const matchedMember = appState.members.find(m => m.email.toLowerCase() === email.toLowerCase() || m.memberCode.toLowerCase() === email.toLowerCase());
+        if (matchedMember) {
+          appState.currentUser = { role: 'member', name: matchedMember.name, email: matchedMember.email, tier: matchedMember.tier, memberCode: matchedMember.memberCode };
+          switchView('member');
+          showToast(`Welcome back, ${matchedMember.name}!`);
+          saveState();
+          return;
+        } else if (email) {
+          appState.currentUser = { role: 'member', name: email.split('@')[0], email: email, tier: 'Pro', memberCode: 'ASP-' + Math.floor(1000 + Math.random() * 9000) };
+          switchView('member');
+          showToast(`Signed in as ${appState.currentUser.name}`);
+          saveState();
+          return;
+        }
+
+        showToast('Please enter your email / ID and password', false);
+      }
+
+      function logoutUser() {
+        if (supabaseClient && isSupabaseConnected) {
+          try { supabaseClient.auth.signOut(); } catch (e) {}
+        }
+        appState.currentUser = null;
+        showToast('Signed out of session');
+        switchView('home');
+        saveState();
+      }
+
+      function openMemberPortal() {
+        if (!appState.currentUser || appState.currentUser.role !== 'member') {
+          switchView('login');
+        } else {
+          switchView('member');
+        }
+      }
+
+      // Member Pass Actions
+      async function simulateTurnstileCheckIn() {
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const memberName = appState.currentUser?.name || 'Alex Rivera';
+
+        appState.attendanceStream.unshift({
+          id: 'att-' + Date.now(),
+          name: memberName,
+          time: timeStr,
+          type: 'Turnstile NFC'
+        });
+        const alex = appState.members.find(m => m.id === 'mem-1');
+        if (alex) alex.totalCheckIns++;
+        showToast('Access Granted: Turnstile Unlocked. Welcome back, ' + memberName.split(' ')[0] + '!');
+        saveState();
+
+        if (supabaseClient && isSupabaseConnected) {
+          try {
+            await supabaseClient.from('attendance').insert([{
+              member_name: memberName,
+              type: 'Turnstile NFC'
+            }]);
+          } catch (err) {
+            console.warn('Supabase attendance log error:', err);
+          }
+        }
+      }
+
+      async function toggleClassEnrollment(classId) {
+        const cls = appState.classes.find(c => c.id === classId);
+        if (!cls) return;
+        cls.userEnrolled = !cls.userEnrolled;
+        cls.enrolled += cls.userEnrolled ? 1 : -1;
+        showToast(cls.userEnrolled ? `Booked spot in ${cls.name}` : `Cancelled booking for ${cls.name}`);
+        saveState();
+
+        if (supabaseClient && isSupabaseConnected) {
+          try {
+            await supabaseClient.from('classes').update({ enrolled: cls.enrolled }).eq('id', classId);
+            if (cls.userEnrolled) {
+              await supabaseClient.from('class_bookings').insert([{
+                class_id: classId,
+                member_name: appState.currentUser?.name || 'Alex Rivera'
+              }]);
+            }
+          } catch (err) {
+            console.warn('Supabase class enrollment update error:', err);
+          }
+        }
+      }
+
+      function toggleEventRSVP(eventId) {
+        const ev = appState.events.find(e => e.id === eventId);
+        if (!ev) return;
+        ev.userRsvpd = !ev.userRsvpd;
+        ev.rsvpCount += ev.userRsvpd ? 1 : -1;
+        showToast(ev.userRsvpd ? `RSVP confirmed for ${ev.title}` : `RSVP cancelled for ${ev.title}`);
+        saveState();
+      }
+
+      function copyPromoCode(code) {
+        navigator.clipboard.writeText(code);
+        showToast(`Promo code ${code} copied to clipboard!`);
+      }
+
+      function likeNewsArticle(newsId) {
+        const item = appState.news.find(n => n.id === newsId);
+        if (item) {
+          item.likes++;
+          saveState();
+        }
+      }
+
+      // Admin Governance Actions
+      function setAdminTab(tab) {
+        ['members', 'staff', 'schedule', 'finances'].forEach(t => {
+          const btn = document.getElementById(`admin-tab-btn-${t}`);
+          const content = document.getElementById(`admin-content-${t}`);
+          if (btn && content) {
+            if (t === tab) {
+              btn.className = 'px-4 py-2 rounded-xl text-xs sm:text-sm font-bold bg-red-600 text-white transition flex items-center gap-2';
+              content.classList.remove('hidden');
+            } else {
+              btn.className = 'px-4 py-2 rounded-xl text-xs sm:text-sm font-bold text-gray-400 hover:text-white hover:bg-gray-900 transition flex items-center gap-2';
+              content.classList.add('hidden');
+            }
+          }
+        });
+      }
+
+      async function updateMemberStatus(id, newStatus) {
+        const mem = appState.members.find(m => m.id === id);
+        if (mem) {
+          mem.status = newStatus;
+          showToast(`Member ${mem.name} status set to ${newStatus}`);
+          saveState();
+
+          if (supabaseClient && isSupabaseConnected) {
+            try {
+              await supabaseClient.from('members').update({ status: newStatus }).eq('id', id);
+            } catch (err) {
+              console.warn('Supabase member status update error:', err);
+            }
+          }
+        }
+      }
+
+      async function deleteMember(id) {
+        appState.members = appState.members.filter(m => m.id !== id);
+        showToast('Member account removed');
+        saveState();
+
+        if (supabaseClient && isSupabaseConnected) {
+          try {
+            await supabaseClient.from('members').delete().eq('id', id);
+          } catch (err) {
+            console.warn('Supabase member delete error:', err);
+          }
+        }
+      }
+
+      async function deleteStaff(id) {
+        appState.staff = appState.staff.filter(s => s.id !== id);
+        showToast('Staff member removed');
+        saveState();
+
+        if (supabaseClient && isSupabaseConnected) {
+          try {
+            await supabaseClient.from('staff').delete().eq('id', id);
+          } catch (err) {
+            console.warn('Supabase staff delete error:', err);
+          }
+        }
+      }
+
+      async function deleteClass(id) {
+        appState.classes = appState.classes.filter(c => c.id !== id);
+        showToast('Class removed from schedule');
+        saveState();
+
+        if (supabaseClient && isSupabaseConnected) {
+          try {
+            await supabaseClient.from('classes').delete().eq('id', id);
+          } catch (err) {
+            console.warn('Supabase class delete error:', err);
+          }
+        }
+      }
+
+      // Modal Triggers
+      function openModal(id) { 
+        const el = document.getElementById(id);
+        if (el) el.classList.remove('hidden'); 
+      }
+      function closeModal(id) { 
+        const el = document.getElementById(id);
+        if (el) el.classList.add('hidden'); 
+      }
+      function openLogWorkoutModal() { openModal('modal-log-workout'); }
+      function openAddMemberModal() { openModal('modal-add-member'); }
+      function openBroadcastModal() { openModal('modal-broadcast'); }
+      function openAddStaffModal() { openModal('modal-add-staff'); }
+      function openAddClassModal() { openModal('modal-add-class'); }
+
+      function handleLogWorkout(e) {
+        e.preventDefault();
+        const title = document.getElementById('log-workout-title').value;
+        showToast(`Saved training log: "${title}"`);
+        closeModal('modal-log-workout');
+        saveState();
+      }
+
+      async function handleAddMember(e) {
+        e.preventDefault();
+        const name = document.getElementById('new-member-name').value;
+        const email = document.getElementById('new-member-email').value;
+        const tier = document.getElementById('new-member-tier').value;
+        const codeNum = Math.floor(1000 + Math.random() * 9000);
+
+        const newMem = {
+          id: 'mem-' + Date.now(),
+          name,
+          email,
+          memberCode: 'ASP-' + codeNum,
+          tier,
+          status: 'Active',
+          totalCheckIns: 0,
+          expiryDate: 'Mar 2027'
+        };
+
+        appState.members.unshift(newMem);
+        showToast(`Registered member ${name} with Code ASP-${codeNum}`);
+        closeModal('modal-add-member');
+        saveState();
+
+        if (supabaseClient && isSupabaseConnected) {
+          try {
+            const { data, error } = await supabaseClient.from('members').insert([{
+              name,
+              email,
+              member_code: 'ASP-' + codeNum,
+              tier,
+              status: 'Active',
+              total_check_ins: 0,
+              expiry_date: 'Mar 2027',
+              role: 'member'
+            }]).select();
+            if (!error && data && data[0]) {
+              newMem.id = data[0].id;
+              saveState();
+            }
+          } catch (err) {
+            console.warn('Supabase member insert error:', err);
+          }
+        }
+      }
+
+      async function handleBroadcastNews(e) {
+        e.preventDefault();
+        const title = document.getElementById('news-title').value;
+        const category = document.getElementById('news-category').value;
+        const snippet = document.getElementById('news-snippet').value;
+
+        const newNews = {
+          id: 'news-' + Date.now(),
+          title,
+          category,
+          snippet,
+          date: 'Just now',
+          likes: 0
+        };
+
+        appState.news.unshift(newNews);
+        showToast('Published announcement to community feed');
+        closeModal('modal-broadcast');
+        saveState();
+
+        if (supabaseClient && isSupabaseConnected) {
+          try {
+            const { data, error } = await supabaseClient.from('news').insert([{
+              title,
+              category,
+              snippet,
+              date: 'Just now',
+              likes: 0
+            }]).select();
+            if (!error && data && data[0]) {
+              newNews.id = data[0].id;
+              saveState();
+            }
+          } catch (err) {
+            console.warn('Supabase news broadcast error:', err);
+          }
+        }
+      }
+
+      async function handleAddStaff(e) {
+        e.preventDefault();
+        const name = document.getElementById('new-staff-name').value;
+        const role = document.getElementById('new-staff-role').value;
+        const specialty = document.getElementById('new-staff-specialty').value;
+
+        const newStaff = {
+          id: 'st-' + Date.now(),
+          name,
+          role,
+          specialty,
+          rating: 5.0
+        };
+
+        appState.staff.unshift(newStaff);
+        showToast(`Added coach ${name}`);
+        closeModal('modal-add-staff');
+        saveState();
+
+        if (supabaseClient && isSupabaseConnected) {
+          try {
+            const { data, error } = await supabaseClient.from('staff').insert([{
+              name,
+              role,
+              specialty,
+              rating: 5.0
+            }]).select();
+            if (!error && data && data[0]) {
+              newStaff.id = data[0].id;
+              saveState();
+            }
+          } catch (err) {
+            console.warn('Supabase staff insert error:', err);
+          }
+        }
+      }
+
+      async function handleAddClass(e) {
+        e.preventDefault();
+        const name = document.getElementById('new-class-name').value;
+        const category = document.getElementById('new-class-category').value;
+        const instructor = document.getElementById('new-class-instructor').value;
+        const day = document.getElementById('new-class-day').value;
+        const capacity = parseInt(document.getElementById('new-class-capacity').value, 10) || 20;
+        const time = document.getElementById('new-class-time').value;
+
+        const newClass = {
+          id: 'cls-' + Date.now(),
+          name,
+          instructor,
+          day,
+          time,
+          room: 'Main Floor',
+          category,
+          capacity,
+          enrolled: 0,
+          userEnrolled: false
+        };
+
+        appState.classes.push(newClass);
+        showToast(`Created class ${name}`);
+        closeModal('modal-add-class');
+        saveState();
+
+        if (supabaseClient && isSupabaseConnected) {
+          try {
+            const { data, error } = await supabaseClient.from('classes').insert([{
+              name,
+              instructor,
+              day,
+              time,
+              room: 'Main Floor',
+              category,
+              capacity,
+              enrolled: 0
+            }]).select();
+            if (!error && data && data[0]) {
+              newClass.id = data[0].id;
+              saveState();
+            }
+          } catch (err) {
+            console.warn('Supabase class insert error:', err);
+          }
+        }
+      }
+
+      // RENDER FUNCTIONS
+      function renderApp() {
+        // 1. Header & Hamburger Sign In Logic
+        // Rule: Sign in option is ONLY accessible from hamburger menu!
+        const headerUserSection = document.getElementById('header-user-section');
+        const drawerAuthCta = document.getElementById('drawer-auth-cta');
+        const drawerUserFooter = document.getElementById('drawer-user-footer');
+        const drawerAdminLink = document.getElementById('drawer-admin-link');
+        const adminBannerName = document.getElementById('admin-banner-name');
+
+        if (adminBannerName) {
+          adminBannerName.textContent = (appState.currentUser && appState.currentUser.role === 'admin') 
+            ? (appState.currentUser.email || appState.currentUser.name)
+            : 'mid@aspfit.com';
+        }
+
+        if (appState.currentUser) {
+          // Logged In: Show user pill in header & drawer
+          headerUserSection.innerHTML = `
+            <div class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-gray-900 border border-gray-800">
+              <span class="w-2 h-2 rounded-full bg-red-500"></span>
+              <span class="text-xs font-bold text-white">${appState.currentUser.name}</span>
+              <span class="text-[10px] px-1.5 py-0.5 rounded font-bold uppercase bg-red-950 text-red-400 border border-red-800/60">${appState.currentUser.role}</span>
+              <button onclick="logoutUser()" class="ml-1 text-gray-400 hover:text-white" title="Sign Out">
+                <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
+          `;
+          
+          if (drawerAuthCta) {
+            drawerAuthCta.innerHTML = '';
+          }
+
+          if (drawerUserFooter) {
+            drawerUserFooter.innerHTML = `
+              <div class="flex items-center justify-between">
+                <div>
+                  <span class="text-xs font-bold text-white block">${appState.currentUser.name}</span>
+                  <span class="text-[10px] text-gray-400 uppercase font-mono">${appState.currentUser.role} account</span>
+                </div>
+                <button onclick="logoutUser(); toggleDrawer(false);" class="px-3 py-1.5 rounded-xl bg-gray-900 text-xs font-bold text-red-400 hover:text-white border border-gray-800 transition">
+                  Sign Out
+                </button>
+              </div>
+            `;
+          }
+
+          if (drawerAdminLink) {
+            drawerAdminLink.classList.remove('hidden');
+          }
+        } else {
+          // Logged Out
+          headerUserSection.innerHTML = '';
+
+          if (drawerAuthCta) {
+            drawerAuthCta.innerHTML = `
+              <button onclick="switchView('login'); toggleDrawer(false);" class="w-full py-3 px-4 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-sm shadow transition flex items-center justify-center gap-2">
+                <i data-lucide="log-in" class="w-4 h-4"></i>
+                <span>Sign In to Account</span>
+              </button>
+            `;
+          }
+
+          if (drawerUserFooter) {
+            drawerUserFooter.innerHTML = `
+              <p class="text-[11px] text-gray-500 text-center py-2 font-medium">Aspire Fitness Member Portal</p>
+            `;
+          }
+
+          if (drawerAdminLink) {
+            drawerAdminLink.classList.remove('hidden');
+          }
+        }
+
+        // 2. Promos Grid
+        const promosGrid = document.getElementById('promos-grid');
+        if (promosGrid) {
+          promosGrid.innerHTML = appState.promos.map(p => `
+            <div class="p-5 rounded-2xl bg-gray-900 border border-gray-800 flex flex-col justify-between space-y-3">
+              <div class="flex items-start justify-between">
+                <div>
+                  <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-950 text-red-400 border border-red-800/60">${p.discount}</span>
+                  <h3 class="text-base font-bold text-white mt-1.5">${p.title}</h3>
+                </div>
+                <button onclick="copyPromoCode('${p.code}')" class="px-3 py-1.5 rounded-xl bg-black border border-gray-800 hover:border-red-600 text-xs font-mono font-bold text-red-400 transition flex items-center gap-1.5">
+                  <span>${p.code}</span>
+                  <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                </button>
+              </div>
+              <p class="text-xs text-gray-400">${p.description}</p>
+              <span class="text-[10px] text-gray-500 font-mono flex items-center gap-1"><i data-lucide="clock" class="w-3 h-3 text-red-500"></i> ${p.expiresIn}</span>
+            </div>
+          `).join('');
+        }
+
+        // 3. News Grid
+        const newsGrid = document.getElementById('news-grid');
+        if (newsGrid) {
+          newsGrid.innerHTML = appState.news.map(n => `
+            <div class="p-5 rounded-2xl bg-gray-900 border border-gray-800 flex flex-col justify-between space-y-3">
+              <div>
+                <div class="flex items-center justify-between text-[10px] text-gray-400 mb-1.5">
+                  <span class="px-2 py-0.5 rounded-md font-bold uppercase bg-black text-red-400 border border-red-900/30">${n.category}</span>
+                  <span>${n.date}</span>
+                </div>
+                <h3 class="text-base font-bold text-white leading-snug">${n.title}</h3>
+                <p class="text-xs text-gray-400 mt-2">${n.snippet}</p>
+              </div>
+              <div class="pt-3 border-t border-gray-800 flex items-center justify-between text-xs">
+                <button onclick="likeNewsArticle('${n.id}')" class="text-gray-400 hover:text-red-400 flex items-center gap-1 font-bold transition">
+                  <i data-lucide="heart" class="w-4 h-4 text-red-500"></i>
+                  <span>${n.likes} Likes</span>
+                </button>
+                <span class="text-[10px] text-gray-500 font-mono">Aspire Official</span>
+              </div>
+            </div>
+          `).join('');
+        }
+
+        // 4. Events Grid
+        const eventsGrid = document.getElementById('events-grid');
+        if (eventsGrid) {
+          eventsGrid.innerHTML = appState.events.map(ev => `
+            <div class="p-5 rounded-2xl bg-gray-900 border border-gray-800 flex flex-col justify-between space-y-3">
+              <div>
+                <span class="text-[10px] font-bold uppercase tracking-wider text-red-400">${ev.time}</span>
+                <h3 class="text-base font-bold text-white mt-1">${ev.title}</h3>
+              </div>
+              <div class="pt-3 border-t border-gray-800 flex items-center justify-between text-xs">
+                <span class="text-gray-400"><strong class="text-white">${ev.rsvpCount}</strong> attending</span>
+                <button onclick="toggleEventRSVP('${ev.id}')" class="px-3 py-1.5 rounded-xl font-bold transition ${ev.userRsvpd ? 'bg-red-950 text-red-400 border border-red-800/60' : 'bg-red-600 hover:bg-red-700 text-white'}">
+                  ${ev.userRsvpd ? 'Attending ✓' : 'RSVP Spot'}
+                </button>
+              </div>
+            </div>
+          `).join('');
+        }
+
+        // 5. Member Classes
+        const memberClassesGrid = document.getElementById('member-classes-grid');
+        if (memberClassesGrid) {
+          memberClassesGrid.innerHTML = appState.classes.map(c => `
+            <div class="p-4 rounded-2xl bg-black border border-gray-800 flex flex-col justify-between space-y-3">
+              <div>
+                <div class="flex items-center justify-between text-[10px] mb-1">
+                  <span class="font-bold text-red-400">${c.category} • ${c.room}</span>
+                  <span class="text-gray-400">${c.day}</span>
+                </div>
+                <h4 class="font-bold text-base text-white">${c.name}</h4>
+                <p class="text-xs text-gray-400 mt-0.5">${c.time}</p>
+                <p class="text-xs text-gray-400">Coach: <strong class="text-gray-300">${c.instructor}</strong></p>
+              </div>
+              <div class="pt-3 border-t border-gray-900 flex items-center justify-between text-xs">
+                <span class="font-mono text-gray-400">${c.enrolled} / ${c.capacity} slots</span>
+                <button onclick="toggleClassEnrollment('${c.id}')" class="px-3 py-1.5 rounded-xl font-bold transition ${c.userEnrolled ? 'bg-red-950 text-red-400 border border-red-800/60' : 'bg-red-600 hover:bg-red-700 text-white'}">
+                  ${c.userEnrolled ? 'Booked ✓' : 'Book Class'}
+                </button>
+              </div>
+            </div>
+          `).join('');
+        }
+
+        // 6. Member Attendance History
+        const memberAttendanceHistory = document.getElementById('member-attendance-history');
+        if (memberAttendanceHistory) {
+          memberAttendanceHistory.innerHTML = appState.attendanceStream.map(att => `
+            <div class="p-3 bg-black flex items-center justify-between text-xs">
+              <div class="flex items-center space-x-2">
+                <i data-lucide="check-circle" class="w-4 h-4 text-red-500"></i>
+                <span class="font-bold text-white">${att.name}</span>
+                <span class="text-gray-400">(${att.type})</span>
+              </div>
+              <span class="font-mono text-gray-400">${att.time}</span>
+            </div>
+          `).join('');
+        }
+
+        // 7. Admin Members Table
+        const adminMembersTbody = document.getElementById('admin-members-tbody');
+        if (adminMembersTbody) {
+          adminMembersTbody.innerHTML = appState.members.map(m => `
+            <tr class="hover:bg-gray-850/40 transition">
+              <td class="py-3 px-4 font-bold text-white">
+                ${m.name}
+                <span class="block text-[10px] text-gray-400 font-normal">${m.email}</span>
+              </td>
+              <td class="py-3 px-4 font-mono text-gray-300 font-bold">${m.memberCode}</td>
+              <td class="py-3 px-4 text-gray-300">${m.tier}</td>
+              <td class="py-3 px-4">
+                <select onchange="updateMemberStatus('${m.id}', this.value)" class="text-[11px] font-bold rounded px-2 py-0.5 bg-black border border-gray-700 text-white focus:outline-none">
+                  <option value="Active" ${m.status === 'Active' ? 'selected' : ''}>Active</option>
+                  <option value="Pending Renewal" ${m.status === 'Pending Renewal' ? 'selected' : ''}>Pending</option>
+                  <option value="Frozen" ${m.status === 'Frozen' ? 'selected' : ''}>Frozen</option>
+                  <option value="Expired" ${m.status === 'Expired' ? 'selected' : ''}>Expired</option>
+                </select>
+              </td>
+              <td class="py-3 px-4 text-gray-300 font-bold">${m.totalCheckIns}</td>
+              <td class="py-3 px-4 text-right">
+                <button onclick="deleteMember('${m.id}')" class="text-gray-400 hover:text-red-400 p-1 transition" title="Delete Member">
+                  <i data-lucide="trash-2" class="w-4 h-4"></i>
+                </button>
+              </td>
+            </tr>
+          `).join('');
+        }
+
+        // 8. Admin Staff Grid
+        const adminStaffGrid = document.getElementById('admin-staff-grid');
+        if (adminStaffGrid) {
+          adminStaffGrid.innerHTML = appState.staff.map(s => `
+            <div class="bg-gray-900 border border-gray-800 rounded-2xl p-4 flex items-center justify-between">
+              <div>
+                <h4 class="font-bold text-white text-base">${s.name}</h4>
+                <span class="text-xs text-red-400 font-semibold">${s.role}</span>
+                <p class="text-xs text-gray-400 mt-1">${s.specialty}</p>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="text-xs text-gray-300 font-bold">★ ${s.rating}</span>
+                <button onclick="deleteStaff('${s.id}')" class="text-gray-500 hover:text-red-400 p-1 transition" title="Remove Coach">
+                  <i data-lucide="trash-2" class="w-4 h-4"></i>
+                </button>
+              </div>
+            </div>
+          `).join('');
+        }
+
+        // 9. Admin Classes Grid
+        const adminClassesGrid = document.getElementById('admin-classes-grid');
+        if (adminClassesGrid) {
+          adminClassesGrid.innerHTML = appState.classes.map(c => `
+            <div class="bg-gray-900 border border-gray-800 rounded-2xl p-4 flex flex-col justify-between space-y-3">
+              <div>
+                <div class="flex items-center justify-between text-[10px] mb-1">
+                  <span class="font-bold text-red-400">${c.category}</span>
+                  <span class="text-gray-400">${c.day}</span>
+                </div>
+                <h4 class="font-bold text-white text-base">${c.name}</h4>
+                <p class="text-xs text-gray-400 mt-1">${c.time}</p>
+                <p class="text-xs text-gray-400">Coach: <strong class="text-white">${c.instructor}</strong></p>
+              </div>
+              <div class="pt-2 border-t border-gray-800 flex items-center justify-between text-xs">
+                <span class="font-mono text-gray-400">${c.enrolled} / ${c.capacity} Enrolled</span>
+                <button onclick="deleteClass('${c.id}')" class="text-gray-500 hover:text-red-400 p-1 transition" title="Delete Class">
+                  <i data-lucide="trash-2" class="w-4 h-4"></i>
+                </button>
+              </div>
+            </div>
+          `).join('');
+        }
+
+        // 10. Admin Transactions List
+        const adminTransactionsList = document.getElementById('admin-transactions-list');
+        if (adminTransactionsList) {
+          adminTransactionsList.innerHTML = appState.transactions.map(t => `
+            <div class="p-3 bg-black flex items-center justify-between text-xs">
+              <div>
+                <span class="font-bold text-white">${t.item}</span>
+                <p class="text-gray-400">${t.member} • ${t.date}</p>
+              </div>
+              <span class="font-bold text-white text-sm">+$${t.amount.toFixed(2)}</span>
+            </div>
+          `).join('');
+        }
+
+        // 11. Calendar Dots
+        const calendarGrid = document.getElementById('calendar-grid');
+        if (calendarGrid && calendarGrid.children.length === 0) {
+          let dotsHtml = '';
+          for (let i = 1; i <= 28; i++) {
+            const isAttended = [1, 2, 4, 5, 7, 8, 10, 11, 13, 14, 16, 17, 18, 20, 21, 23, 24, 25].includes(i);
+            dotsHtml += `
+              <div class="h-6 rounded-lg flex items-center justify-center font-bold ${isAttended ? 'bg-red-600 text-white shadow-xs' : 'bg-gray-900 text-gray-500'}">
+                ${i}
+              </div>
+            `;
+          }
+          calendarGrid.innerHTML = dotsHtml;
+        }
+
+        // Re-generate Lucide icons
+        lucide.createIcons();
+      }
+
+      // Live search filters
+      function filterAdminMembers(query) {
+        const q = query.toLowerCase();
+        document.querySelectorAll('#admin-members-tbody > tr').forEach(el => {
+          const text = el.textContent.toLowerCase();
+          el.style.display = text.includes(q) ? '' : 'none';
+        });
+      }
+
+      function filterClasses(day) {
+        document.querySelectorAll('#class-filter-days button').forEach(b => {
+          b.className = b.textContent.includes(day.slice(0,3)) || (day === 'All' && b.textContent === 'All') 
+            ? 'px-3 py-1.5 rounded-lg text-xs font-bold bg-red-600 text-white' 
+            : 'px-3 py-1.5 rounded-lg text-xs font-bold bg-black text-gray-400 hover:text-white';
+        });
+        document.querySelectorAll('#member-classes-grid > div').forEach(el => {
+          if (day === 'All') { el.style.display = 'flex'; return; }
+          el.style.display = el.textContent.includes(day) ? 'flex' : 'none';
+        });
+      }
+
+      // Initialize app on load
+      document.addEventListener('DOMContentLoaded', () => {
+        renderApp();
+        updateSupabaseStatusUI();
+        initSupabase();
+      });
+    </script>
+  </body>
+</html>
+
+
